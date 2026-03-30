@@ -14,43 +14,43 @@ const CASES = [
     severity: 'warning',
     color: 'from-yellow-400 to-orange-500',
     borderColor: 'border-yellow-300 dark:border-yellow-700',
-    description: '鱼频繁浮头，水草茂盛但发黄',
+    description: '小鱼总是游到水面上呼吸',
     symptoms: [
-      '鱼儿频繁浮到水面呼吸',
-      '水草生长茂盛但叶片发黄',
-      '下午时段症状加重',
+      '🐟 小鱼频繁游到水面呼吸',
+      '🌿 水草很多但叶子发黄',
+      '⏰ 下午情况更严重',
     ],
-    hint: '提示：注意观察溶氧量的日变化规律',
+    hint: '提示：小鱼为什么会缺氧呢？',
   },
   {
     id: 'green-water',
     name: '绿水病',
-    severity: 'danger',
     icon: Droplets,
+    severity: 'danger',
     color: 'from-green-400 to-emerald-600',
     borderColor: 'border-green-300 dark:border-green-700',
-    description: '水变绿，鱼少动，螺死亡',
+    description: '水变绿了，小鱼不爱动',
     symptoms: [
-      '水质变成浑浊的绿色',
-      '鱼儿活动减少，精神萎靡',
-      '螺类大量死亡',
+      '💧 水变成浑浊的绿色',
+      '🐟 小鱼不爱动，无精打采',
+      '🐌 螺蛳死了好几只',
     ],
-    hint: '提示：绿色水体暗示某种生物大量繁殖',
+    hint: '提示：绿色说明水里有什么生物变多了？',
   },
   {
     id: 'dead-silence',
     name: '死寂病',
-    severity: 'critical',
     icon: Skull,
+    severity: 'critical',
     color: 'from-gray-400 to-gray-600',
     borderColor: 'border-gray-300 dark:border-gray-700',
-    description: '所有生物死亡，水清澈但无生命',
+    description: '所有生物都死亡了',
     symptoms: [
-      '所有鱼类死亡',
-      '水草枯萎腐烂',
-      '水质异常清澈',
+      '💀 所有的小鱼都死了',
+      '🍂 水草枯萎腐烂',
+      '💧 水很清澈但没有生命',
     ],
-    hint: '提示：清澈的水不一定健康，思考发生了什么',
+    hint: '提示：为什么会发生这么严重的情况？',
   },
 ];
 
@@ -87,18 +87,18 @@ export default function DetectivePage() {
                   欢迎来到生态诊断中心 🔍
                 </h2>
                 <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">
-                  这里是生态瓶诊断中心。作为生态医生，你需要观察病例数据、分析异常原因、
-                  开出正确的治疗处方。AI侦探助手会协助你完成诊断过程。
+                  你好，小医生！👋 这里是小生态瓶生病的地方。你的任务是：看数据、找原因、开药方！
+                  AI助手"波波"会帮助你完成诊断。
                 </p>
                 <div className="flex gap-2 mt-3">
                   <Badge variant="outline" className="text-yellow-600 border-yellow-300">
-                    ⚠️ 轻度病例
+                    ⚠️ 简单病例
                   </Badge>
                   <Badge variant="outline" className="text-orange-600 border-orange-300">
-                    🔶 中度病例
+                    🔶 中等病例
                   </Badge>
                   <Badge variant="outline" className="text-red-600 border-red-300">
-                    🔴 重度病例
+                    🔴 困难病例
                   </Badge>
                 </div>
               </div>
@@ -169,14 +169,14 @@ export default function DetectivePage() {
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <Leaf className="w-5 h-5 text-green-500" />
-              诊断小贴士
+              诊断步骤 📝
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
-            <p>🔬 <strong>观察数据</strong>：仔细查看各项环境指标的变化趋势</p>
-            <p>🤔 <strong>分析原因</strong>：根据症状和数据，推理可能的原因</p>
-            <p>💊 <strong>开出处方</strong>：调整参数，模拟治疗效果</p>
-            <p>📈 <strong>验证结果</strong>：观察一周后的变化，验证你的诊断</p>
+            <p>🔍 <strong>第一步</strong>：看数据和图片，观察有什么不正常</p>
+            <p>💭 <strong>第二步</strong>：和AI助手聊天，讨论可能的原因</p>
+            <p>💊 <strong>第三步</strong>：点击"开始治疗"，调整参数</p>
+            <p>🎉 <strong>第四步</strong>：生成图片，看看治疗结果</p>
           </CardContent>
         </Card>
       </div>
