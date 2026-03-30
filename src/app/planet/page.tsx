@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { VoiceInput } from '@/components/ui/voice-input';
 import { Loader2, Send, Globe, Leaf, TreePine, Bird, Fish, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -107,6 +108,10 @@ export default function PlanetPage() {
     }
   };
 
+  const handleVoiceTranscript = (text: string) => {
+    setInput(prev => prev + text);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50 to-emerald-100 dark:from-green-950 dark:to-emerald-900">
       <div className="container mx-auto px-4 py-6">
@@ -190,6 +195,7 @@ export default function PlanetPage() {
                     disabled={isLoading}
                     className="flex-1"
                   />
+                  <VoiceInput onTranscript={handleVoiceTranscript} disabled={isLoading} />
                   <Button
                     onClick={sendMessage}
                     disabled={isLoading || !input.trim()}

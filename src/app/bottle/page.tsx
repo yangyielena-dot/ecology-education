@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
+import { VoiceInput } from '@/components/ui/voice-input';
 import { 
   Loader2, Send, FlaskConical, Droplets, Wind, Thermometer, 
   Fish, Bird, Leaf, TreePine, Mountain, ArrowLeft,
@@ -162,6 +163,10 @@ export default function BottlePage() {
     return '需调整';
   };
 
+  const handleVoiceTranscript = (text: string) => {
+    setInput(prev => prev + text);
+  };
+
   if (!bottleType) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-blue-50 to-cyan-100 dark:from-blue-950 dark:to-cyan-900 flex items-center justify-center p-4">
@@ -273,6 +278,7 @@ export default function BottlePage() {
                     disabled={isLoading}
                     className="flex-1 text-sm"
                   />
+                  <VoiceInput onTranscript={handleVoiceTranscript} disabled={isLoading} />
                   <Button
                     onClick={sendMessage}
                     disabled={isLoading || !input.trim()}
