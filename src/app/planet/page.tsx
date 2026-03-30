@@ -275,13 +275,17 @@ export default function PlanetPage() {
                   ) : (
                     <>
                       <Globe className="w-4 h-4 mr-2" />
-                      生成我的生态星球图片
+                      生成我的生态星球图片 🎨
                     </>
                   )}
                 </Button>
-                {messages.length < 2 && (
+                {messages.length < 2 ? (
                   <p className="text-xs text-center text-gray-500 dark:text-gray-400">
-                    请先与AI助手对话，描述你的生态星球
+                    💡 先与AI助手对话，描述你想创造的生态星球（环境、植物、动物等）
+                  </p>
+                ) : (
+                  <p className="text-xs text-center text-green-600 dark:text-green-400 font-medium">
+                    ✨ 点击按钮，看看你的生态星球是什么样子！
                   </p>
                 )}
               </div>
