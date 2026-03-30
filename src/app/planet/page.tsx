@@ -8,7 +8,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { VoiceInput } from '@/components/ui/voice-input';
 import { Loader2, Send, Globe, Leaf, TreePine, Bird, Fish, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
-import Image from 'next/image';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -220,11 +219,10 @@ export default function PlanetPage() {
               {generatedImage ? (
                 <div className="relative w-full h-full flex flex-col">
                   <div className="relative flex-1 rounded-lg overflow-hidden bg-gradient-to-br from-green-100 to-blue-100 dark:from-green-900 dark:to-blue-900">
-                    <Image
+                    <img
                       src={generatedImage}
                       alt="生成的生态星球"
-                      fill
-                      className="object-cover"
+                      className="w-full h-full object-cover"
                     />
                   </div>
                   <p className="text-center text-sm text-gray-600 dark:text-gray-300 mt-4">
