@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Globe, FlaskConical, Leaf, TreePine } from 'lucide-react';
+import { Globe, FlaskConical, Leaf, TreePine, Search, Stethoscope } from 'lucide-react';
 
 export default function Home() {
   return (
@@ -31,7 +31,7 @@ export default function Home() {
         </div>
 
         {/* Main Cards */}
-        <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+        <div className="grid md:grid-cols-3 gap-6 max-w-7xl mx-auto">
           {/* 重建生态星球 */}
           <Card className="group hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-2 border-green-200 dark:border-green-800">
             <CardHeader className="text-center pb-4">
@@ -99,6 +99,42 @@ export default function Home() {
               <Link href="/bottle">
                 <Button className="w-full bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white font-semibold py-6 text-lg">
                   开始设计生态瓶
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+          {/* 生态瓶小侦探 */}
+          <Card className="group hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-2 border-purple-200 dark:border-purple-800">
+            <CardHeader className="text-center pb-4">
+              <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-gradient-to-br from-purple-400 to-pink-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Search className="w-8 h-8 text-white" />
+              </div>
+              <CardTitle className="text-2xl font-bold text-purple-700 dark:text-purple-400">
+                生态瓶小侦探
+              </CardTitle>
+              <CardDescription className="text-base">
+                诊断生态瓶疾病，成为生态医生
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
+                <li className="flex items-start gap-2">
+                  <span className="text-purple-500 mt-0.5">✦</span>
+                  <span>观察异常现象，分析数据曲线</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-purple-500 mt-0.5">✦</span>
+                  <span>AI侦探助手引导诊断过程</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-purple-500 mt-0.5">✦</span>
+                  <span>开处方治疗，观察恢复效果</span>
+                </li>
+              </ul>
+              <Link href="/detective">
+                <Button className="w-full bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white font-semibold py-6 text-lg">
+                  开始诊断病例
                 </Button>
               </Link>
             </CardContent>
