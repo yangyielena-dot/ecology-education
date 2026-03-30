@@ -234,14 +234,14 @@ export default function BottlePage() {
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Left: AI Chat */}
           <Card className="lg:col-span-1 h-[700px] flex flex-col">
-            <CardHeader className="border-b">
+            <CardHeader className="border-b flex-shrink-0">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Leaf className="w-5 h-5 text-blue-500" />
                 AI助手
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex-1 flex flex-col p-0">
-              <ScrollArea ref={scrollRef} className="flex-1 p-4">
+            <CardContent className="flex-1 flex flex-col p-0 min-h-0">
+              <ScrollArea ref={scrollRef} className="flex-1 p-4 h-0">
                 <div className="space-y-3">
                   {messages.map((msg, idx) => (
                     <div
@@ -268,7 +268,7 @@ export default function BottlePage() {
                   )}
                 </div>
               </ScrollArea>
-              <div className="p-3 border-t">
+              <div className="p-3 border-t flex-shrink-0">
                 <div className="flex gap-2">
                   <Input
                     value={input}

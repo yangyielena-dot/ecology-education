@@ -135,14 +135,14 @@ export default function PlanetPage() {
         <div className="grid lg:grid-cols-2 gap-6">
           {/* Chat Section */}
           <Card className="h-[700px] flex flex-col">
-            <CardHeader className="border-b">
+            <CardHeader className="border-b flex-shrink-0">
               <CardTitle className="flex items-center gap-2">
                 <Leaf className="w-5 h-5 text-green-500" />
                 生态AI助手
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex-1 flex flex-col p-0">
-              <ScrollArea ref={scrollRef} className="flex-1 p-4">
+            <CardContent className="flex-1 flex flex-col p-0 min-h-0">
+              <ScrollArea ref={scrollRef} className="flex-1 p-4 h-0">
                 <div className="space-y-4">
                   {messages.map((msg, idx) => (
                     <div
@@ -185,7 +185,7 @@ export default function PlanetPage() {
                 </div>
               </ScrollArea>
 
-              <div className="p-4 border-t">
+              <div className="p-4 border-t flex-shrink-0">
                 <div className="flex gap-2">
                   <Input
                     value={input}
