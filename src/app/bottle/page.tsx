@@ -206,6 +206,8 @@ export default function BottlePage() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [draggingItem, setDraggingItem] = useState<string | null>(null);
+  const [isCompleted, setIsCompleted] = useState(false);
+  const [finalScore, setFinalScore] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const bottleRef = useRef<HTMLDivElement>(null);
@@ -362,6 +364,55 @@ export default function BottlePage() {
 
   const handleDragEnd = () => {
     setDraggingItem(null);
+  };
+
+  // 完成设计
+  const handleComplete = () => {
+    const score = envData.stability;
+    setFinalScore(score);
+    setIsCompleted(true);
+
+    // 根据评分生成评价
+    let evaluation = '';
+    let summary = '';
+
+    if (score >= 80) {
+      evaluation = `🎉 太棒了！你的${bottleType === 'water' ? '水生' : '陆生'}生态瓶获得了 ${score} 分！
+      
+你的设计非常平衡，生态瓶里的生物应该能健康生活！`;
+
+      summary = `📌 设计总结：
+
+你为了让生态瓶稳定，考虑了生物的数量和光照，让它们达到了平衡点——这些都是影响稳定性的关键因素。
+
+${bottleType === 'water' ? `🌊 水生生态瓶的关键：
+• 小鱼需要氧气呼吸，水草通过光合作用产生氧气
+• 光照帮助水草产氧，但太多也可能让水质变化
+• 苹果螺帮助清理废物，保持水质清洁` : `🌿 陆生生态瓶的关键：
+• 苔藓保持湿度，让小生物有舒适的环境
+• 蚯蚓和鼠妇分解有机物，让土壤更健康
+• 光照时间影响湿度，需要找到合适的平衡点`}
+
+你已经掌握了设计生态瓶的秘诀！🏆`;
+    } else if (score >= 50) {
+      evaluation = `👍 不错！你的${bottleType === 'water' ? '水生' : '陆生'}生态瓶获得了 ${score} 分。
+
+生态瓶基本稳定，但还有一些可以改进的地方。仔细观察一下各项指标，你觉得哪里可以调整呢？`;
+    } else {
+      evaluation = `💪 继续努力！你的${bottleType === 'water' ? '水生' : '陆生'}生态瓶获得了 ${score} 分。
+
+仔细看看左边的指标数据，${bottleType === 'water' ? '溶氧量和废物浓度' : '湿度和有机物'}是否在合适的范围？想一想：
+• ${bottleType === 'water' ? '小鱼需要什么才能呼吸？水草能帮什么忙？' : '小生物们喜欢什么样的环境？苔藓有什么作用？'}
+• 光照时间会对环境产生什么影响？
+
+试试调整一下，再看看数据的变化！`;
+    }
+
+    // 添加评价消息
+    setMessages(prev => [...prev, { 
+      role: 'assistant', 
+      content: evaluation + (score >= 80 ? '\n\n' + summary : '')
+    }]);
   };
 
   // 获取元素大小对应的样式
@@ -582,11 +633,17 @@ export default function BottlePage() {
                 <div className="text-center">
                   <div className="flex items-center justify-center gap-1 mb-1">
                     <Sparkles className="w-4 h-4 text-purple-500" />
-                    <span className="text-xs text-gray-500">稳定性</span>
+                    <span className="text-xs text-gray-500">生态评分</span>
                   </div>
-                  <p className={`text-2xl font-bold ${envData.stability >= 50 ? 'text-green-600' : 'text-yellow-500'}`}>
-                    {envData.stability}%
-                  </p>
+                  <div className="flex items-center justify-center gap-1">
+                    <p className={`text-2xl font-bold ${envData.stability >= 50 ? 'text-green-600' : 'text-yellow-500'}`}>
+                      {envData.stability}
+                    </p>
+                    <span className="text-sm text-gray-500">分</span>
+                    <span className="text-lg">
+                      {envData.stability >= 80 ? '😊' : envData.stability >= 50 ? '😐' : '😟'}
+                    </span>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -613,6 +670,15 @@ export default function BottlePage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* 完成按钮 */}
+          <Button 
+            onClick={handleComplete}
+            disabled={Object.values(elements).every(v => v === 0)}
+            className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-3"
+          >
+            ✓ 完成设计
+          </Button>
         </div>
 
         {/* 右列：元素选择 + AI对话 */}
