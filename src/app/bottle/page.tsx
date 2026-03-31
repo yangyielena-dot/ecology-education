@@ -82,11 +82,89 @@ function calculateEnvironment(elements: Record<string, number>) {
     oxygen: Math.max(0, Math.min(100, Math.round(oxygen))),
     waste: Math.max(0, Math.min(100, Math.round(waste))),
     stability: Math.max(0, Math.min(100, Math.round(stability))),
+    fishCount,
+    snailCount,
+    waterweedCount,
+    duckweedCount,
   };
+}
+
+// 生成AI反馈消息
+function generateFeedback(
+  prevElements: Record<string, number>,
+  newElements: Record<string, number>,
+  envData: ReturnType<typeof calculateEnvironment>
+): string | null {
+  const prev = {
+    fish: prevElements['zebra-fish'] || 0,
+    snail: prevElements['apple-snail'] || 0,
+    waterweed: prevElements['waterweed'] || 0,
+    duckweed: prevElements['duckweed'] || 0,
+    sand: prevElements['sand'] || 0,
+    stone: prevElements['stone'] || 0,
+  };
+  
+  const curr = {
+    fish: newElements['zebra-fish'] || 0,
+    snail: newElements['apple-snail'] || 0,
+    waterweed: newElements['waterweed'] || 0,
+    duckweed: newElements['duckweed'] || 0,
+    sand: newElements['sand'] || 0,
+    stone: newElements['stone'] || 0,
+  };
+
+  // 检测变化
+  const addedFish = curr.fish > prev.fish;
+  const addedSnail = curr.snail > prev.snail;
+  const addedWaterweed = curr.waterweed > prev.waterweed;
+  const addedDuckweed = curr.duckweed > prev.duckweed;
+  const addedSand = curr.sand > prev.sand;
+  const addedStone = curr.stone > prev.stone;
+
+  // 鼓励性反馈（当添加正确的东西时）
+  if (addedWaterweed) {
+    if (curr.fish > 0 && curr.waterweed === 1) {
+      return "好主意！🌿 水草可以产生氧气，小鱼就有新鲜空气呼吸了！";
+    }
+    return "不错！🌿 水草是生态瓶的好帮手！";
+  }
+  
+  if (addedDuckweed) {
+    return "好的！🍀 浮萍可以给小鱼遮挡阳光，让它们更舒服！";
+  }
+  
+  if (addedSand && curr.sand === 1) {
+    return "很好！底砂铺好了，植物可以扎根生长了！🌱";
+  }
+  
+  if (addedStone) {
+    return "石头是个不错的装饰！小鱼可以躲在后面休息。🪨";
+  }
+  
+  if (addedSnail) {
+    return "苹果螺来了！🐌 它可以帮忙清理藻类，保持水质干净！";
+  }
+  
+  if (addedFish) {
+    // 添加鱼时的检查
+    if (curr.waterweed === 0 && curr.duckweed === 0) {
+      return `哇，小鱼来了！🐟 但是...你的瓶子里还没有植物呢，小鱼呼吸的氧气从哪里来呢？🤔`;
+    }
+    if (curr.waterweed > 0 && curr.waterweed < curr.fish) {
+      return `又添了一条小鱼！🐟 但是你的水草够不够它们呼吸呢？`;
+    }
+    if (curr.fish >= 3) {
+      return `这么多小鱼！🐟🐟🐟 它们每天需要很多氧气，你的植物够吗？`;
+    }
+    return "小鱼来了！🐟 很可爱吧？记得让它们有足够的氧气哦！";
+  }
+
+  return null;
 }
 
 export default function BottlePage() {
   const [elements, setElements] = useState<Record<string, number>>({ hasWater: 1, sand: 0 });
+  const [prevElements, setPrevElements] = useState<Record<string, number>>({ hasWater: 1, sand: 0 });
   const [placedItems, setPlacedItems] = useState<PlacedItem[]>([]);
   const [lightHours, setLightHours] = useState(8);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -98,48 +176,38 @@ export default function BottlePage() {
 
   const envData = calculateEnvironment(elements);
 
+  // 初始化消息
   useEffect(() => {
     const initialMessage = `你好！我是生态瓶设计助手苗苗 🌱
 
 这是一个空的水生生态瓶，让我们一起来设计它吧！
 
-💡 建议：先铺好底砂，再添加植物，最后放小鱼。
-
-你想先添加什么呢？`;
+你可以从右边选择生物和材料添加到生态瓶中。试试看！`;
     setMessages([{ role: 'assistant', content: initialMessage }]);
   }, []);
 
+  // 自动滚动到底部
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
 
-  // 生成建议消息
+  // 当元素变化时生成反馈
   useEffect(() => {
-    const fishCount = elements['zebra-fish'] || 0;
-    const snailCount = elements['apple-snail'] || 0;
-    const waterweedCount = elements['waterweed'] || 0;
-    const duckweedCount = elements['duckweed'] || 0;
-    
-    // 当学生添加了元素后，AI主动提出质疑
-    if (fishCount > 0 && waterweedCount === 0 && messages.length > 0) {
-      const lastMsg = messages[messages.length - 1];
-      if (lastMsg.role === 'assistant' && !lastMsg.content.includes('水草')) {
-        setTimeout(() => {
-          setMessages(prev => [...prev, {
-            role: 'assistant',
-            content: `🤔 我发现一个问题：
-
-你放了 ${fishCount} 条小鱼，但是还没有水草哦！
-
-小鱼需要氧气才能呼吸，而水草是氧气的"制造工厂"。没有水草，小鱼会缺氧的！
-
-要不要添加一些水草呢？`
-          }]);
-        }, 1000);
-      }
+    // 跳过初始化
+    if (Object.keys(prevElements).length === 0 || 
+        JSON.stringify(prevElements) === JSON.stringify(elements)) {
+      return;
     }
+    
+    const feedback = generateFeedback(prevElements, elements, envData);
+    if (feedback) {
+      setMessages(prev => [...prev, { role: 'assistant', content: feedback }]);
+    }
+    
+    // 更新 prevElements
+    setPrevElements({ ...elements });
   }, [elements]);
 
   const sendMessage = async () => {
@@ -248,8 +316,6 @@ export default function BottlePage() {
   const handleDragEnd = () => {
     setDraggingItem(null);
   };
-
-  const allElements = [...WATER_ELEMENTS.animals, ...WATER_ELEMENTS.plants, ...WATER_ELEMENTS.materials];
 
   return (
     <div className="h-screen overflow-hidden bg-gradient-to-b from-cyan-50 to-blue-100 dark:from-cyan-950 dark:to-blue-900 flex flex-col">
