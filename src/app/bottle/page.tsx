@@ -12,6 +12,7 @@ import {
   Loader2, Send, FlaskConical, Droplets, Wind,
   ArrowLeft, Sparkles, Sun, Plus, Minus
 } from 'lucide-react';
+import { useLearningRecord } from '@/hooks/useLearningRecord';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -212,12 +213,18 @@ export default function BottlePage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const bottleRef = useRef<HTMLDivElement>(null);
 
+  // 学习记录
+  const { startSession, saveMessage, endSession, sessionId } = useLearningRecord({
+    moduleType: 'bottle',
+    moduleDetail: bottleType || undefined,
+  });
+
   const currentElements = bottleType === 'water' ? WATER_ELEMENTS : LAND_ELEMENTS;
   const envData = bottleType === 'water' 
     ? calculateWaterEnvironment(elements, lightHours) 
     : calculateLandEnvironment(elements, lightHours);
 
-  // 初始化消息
+  // 初始化消息和学习会话
   useEffect(() => {
     if (bottleType) {
       const typeName = bottleType === 'water' ? '水生' : '陆生';
@@ -230,8 +237,11 @@ export default function BottlePage() {
       setElements({});
       setPlacedItems([]);
       setLightHours(8);
+      setIsCompleted(false);
+      // 创建学习会话
+      startSession();
     }
-  }, [bottleType]);
+  }, [bottleType, startSession]);
 
   // 自动滚动到底部
   useEffect(() => {
@@ -244,6 +254,9 @@ export default function BottlePage() {
     setInput('');
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setIsLoading(true);
+
+    // 保存用户消息
+    saveMessage('user', userMessage);
 
     try {
       const response = await fetch('/api/chat', {
@@ -271,6 +284,8 @@ export default function BottlePage() {
           assistantMessage += decoder.decode(value);
         }
         setMessages(prev => [...prev, { role: 'assistant', content: assistantMessage }]);
+        // 保存AI回复
+        saveMessage('assistant', assistantMessage);
       }
     } catch (error) {
       setMessages(prev => [...prev, { role: 'assistant', content: '抱歉，出问题了，请重试。' }]);
@@ -372,6 +387,9 @@ export default function BottlePage() {
     setFinalScore(score);
     setIsCompleted(true);
 
+    // 结束学习会话并记录评分
+    endSession(score);
+
     // 根据评分生成评价
     let evaluation = '';
     let summary = '';
@@ -409,10 +427,13 @@ ${bottleType === 'water' ? `🌊 水生生态瓶的关键：
     }
 
     // 添加评价消息
+    const fullMessage = evaluation + (score >= 80 ? '\n\n' + summary : '');
     setMessages(prev => [...prev, { 
       role: 'assistant', 
-      content: evaluation + (score >= 80 ? '\n\n' + summary : '')
+      content: fullMessage
     }]);
+    // 保存评价消息
+    saveMessage('assistant', fullMessage);
   };
 
   // 获取元素大小对应的样式

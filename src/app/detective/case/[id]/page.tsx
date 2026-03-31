@@ -17,6 +17,7 @@ import {
   Thermometer, Sun, Activity, Beaker, Stethoscope, Sparkles, Image as ImageIcon,
   TrendingUp, TrendingDown, Minus
 } from 'lucide-react';
+import { useLearningRecord } from '@/hooks/useLearningRecord';
 
 // 病例图片配置
 const CASE_IMAGES: Record<string, { sick: string }> = {
@@ -191,15 +192,24 @@ export default function CasePage() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // 学习记录
+  const { startSession, saveMessage, endSession } = useLearningRecord({
+    moduleType: 'detective',
+    moduleDetail: caseId,
+  });
+
   // 计算预测数据
   const predictedData = useMemo(() => calculatePredictedData(treatmentParams), [treatmentParams]);
 
+  // 初始化消息和学习会话
   useEffect(() => {
     if (caseData) {
       setMessages([{ role: 'assistant', content: caseData.initialMessage }]);
       setTreatmentParams(caseData.parameters);
+      // 创建学习会话
+      startSession();
     }
-  }, [caseId]);
+  }, [caseId, caseData, startSession]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -225,6 +235,9 @@ export default function CasePage() {
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setIsLoading(true);
 
+    // 保存用户消息
+    saveMessage('user', userMessage);
+
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -241,6 +254,8 @@ export default function CasePage() {
           assistantMessage += decoder.decode(value);
         }
         setMessages(prev => [...prev, { role: 'assistant', content: assistantMessage }]);
+        // 保存AI回复
+        saveMessage('assistant', assistantMessage);
       }
     } catch (error) {
       setMessages(prev => [...prev, { role: 'assistant', content: '抱歉，出问题了，请重试。' }]);

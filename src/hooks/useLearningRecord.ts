@@ -23,17 +23,10 @@ interface Message {
   created_at: string;
 }
 
-// 生成或获取学生ID（存储在localStorage）
+// 获取学生ID（从localStorage读取用户输入的ID）
 function getStudentId(): string {
   if (typeof window === 'undefined') return '';
-  
-  let studentId = localStorage.getItem('student_id');
-  if (!studentId) {
-    // 生成一个随机学生ID
-    studentId = 'student_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    localStorage.setItem('student_id', studentId);
-  }
-  return studentId;
+  return localStorage.getItem('student_id') || '';
 }
 
 // 获取学生昵称

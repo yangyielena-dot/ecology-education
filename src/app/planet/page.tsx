@@ -8,6 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { VoiceInput } from '@/components/ui/voice-input';
 import { Loader2, Send, Globe, Leaf, TreePine, Bird, Fish, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { useLearningRecord } from '@/hooks/useLearningRecord';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -28,6 +29,16 @@ export default function PlanetPage() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // 学习记录
+  const { startSession, saveMessage, endSession, sessionId } = useLearningRecord({
+    moduleType: 'planet',
+  });
+
+  // 创建学习会话
+  useEffect(() => {
+    startSession();
+  }, [startSession]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -39,6 +50,9 @@ export default function PlanetPage() {
     setInput('');
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setIsLoading(true);
+
+    // 保存用户消息
+    saveMessage('user', userMessage);
 
     try {
       const response = await fetch('/api/chat', {
@@ -65,6 +79,8 @@ export default function PlanetPage() {
         }
 
         setMessages(prev => [...prev, { role: 'assistant', content: assistantMessage }]);
+        // 保存AI回复
+        saveMessage('assistant', assistantMessage);
       }
     } catch (error) {
       console.error('Error:', error);
