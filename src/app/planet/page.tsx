@@ -28,6 +28,7 @@ export default function PlanetPage() {
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const prevMessagesLengthRef = useRef(0);
 
   // 学习记录
   const { startSession, saveMessage, endSession, sessionId } = useLearningRecord({
@@ -39,8 +40,12 @@ export default function PlanetPage() {
     startSession();
   }, [startSession]);
 
+  // 只在消息数量增加时滚动到底部（新消息时）
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messages.length > prevMessagesLengthRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+    prevMessagesLengthRef.current = messages.length;
   }, [messages]);
 
   const sendMessage = async () => {
