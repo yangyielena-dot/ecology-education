@@ -209,8 +209,7 @@ export default function BottlePage() {
   const [draggingItem, setDraggingItem] = useState<string | null>(null);
   const [isCompleted, setIsCompleted] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const prevMessagesLengthRef = useRef(0);
   const bottleRef = useRef<HTMLDivElement>(null);
 
@@ -244,10 +243,14 @@ export default function BottlePage() {
     }
   }, [bottleType, startSession]);
 
-  // 只在消息数量增加时滚动到底部（新消息时）
+  // 只在消息数量增加时滚动 ScrollArea 内部到底部
   useEffect(() => {
     if (messages.length > prevMessagesLengthRef.current) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      // 获取 ScrollArea 的 viewport 元素
+      const viewport = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]');
+      if (viewport) {
+        viewport.scrollTop = viewport.scrollHeight;
+      }
     }
     prevMessagesLengthRef.current = messages.length;
   }, [messages]);
@@ -793,7 +796,7 @@ ${bottleType === 'water' ? `🌊 水生生态瓶的关键：
               </CardTitle>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col p-0 min-h-0">
-              <ScrollArea ref={scrollRef} className="flex-1 p-3 h-0">
+              <ScrollArea ref={scrollAreaRef} className="flex-1 p-3 h-0">
                 <div className="space-y-2">
                   {messages.map((msg, idx) => (
                     <div key={idx} className={`flex gap-1 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -809,7 +812,6 @@ ${bottleType === 'water' ? `🌊 水生生态瓶的关键：
                       </div>
                     </div>
                   )}
-                  <div ref={messagesEndRef} />
                 </div>
               </ScrollArea>
               <div className="p-2 border-t flex-shrink-0">

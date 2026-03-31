@@ -26,8 +26,7 @@ export default function PlanetPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const prevMessagesLengthRef = useRef(0);
 
   // 学习记录
@@ -40,10 +39,14 @@ export default function PlanetPage() {
     startSession();
   }, [startSession]);
 
-  // 只在消息数量增加时滚动到底部（新消息时）
+  // 只在消息数量增加时滚动 ScrollArea 内部到底部
   useEffect(() => {
     if (messages.length > prevMessagesLengthRef.current) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      // 获取 ScrollArea 的 viewport 元素
+      const viewport = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]');
+      if (viewport) {
+        viewport.scrollTop = viewport.scrollHeight;
+      }
     }
     prevMessagesLengthRef.current = messages.length;
   }, [messages]);
@@ -161,7 +164,7 @@ export default function PlanetPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col p-0 min-h-0">
-              <ScrollArea ref={scrollRef} className="flex-1 p-4 h-0">
+              <ScrollArea ref={scrollAreaRef} className="flex-1 p-4 h-0">
                 <div className="space-y-4">
                   {messages.map((msg, idx) => (
                     <div
@@ -201,7 +204,6 @@ export default function PlanetPage() {
                       </div>
                     </div>
                   )}
-                  <div ref={messagesEndRef} />
                 </div>
               </ScrollArea>
 
