@@ -109,13 +109,13 @@ export default function PlanetPage() {
       const conversationText = messages
         .filter(m => m.role === 'user')
         .map(m => m.content)
-        .join('。');
+        .join('，');
 
       const response = await fetch('/api/generate-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          prompt: `一个美丽的生态星球，${conversationText}。充满生机和活力，和谐的生态系统，梦幻般的自然景观，高质量数字艺术作品。` 
+          prompt: `生态星球场景：${conversationText}。只包含上述提到的生物和环境元素，不要添加任何其他生物或元素。高清数字艺术风格。` 
         }),
       });
 

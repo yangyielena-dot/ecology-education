@@ -9,9 +9,12 @@ export async function POST(request: NextRequest) {
     const config = new Config();
     const client = new ImageGenerationClient(config, customHeaders);
 
+    // 生成图片，添加负面提示避免额外元素
+    const enhancedPrompt = `${prompt} 严格按照描述生成，不添加任何未提及的生物或元素。`;
+
     // 生成图片
     const response = await client.generate({
-      prompt: prompt,
+      prompt: enhancedPrompt,
       size: size,
       watermark: false,
     });
