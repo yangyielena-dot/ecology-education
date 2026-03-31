@@ -189,6 +189,7 @@ export default function CasePage() {
   const [treatmentImage, setTreatmentImage] = useState<string | null>(null);
   const [treatmentResult, setTreatmentResult] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // 计算预测数据
   const predictedData = useMemo(() => calculatePredictedData(treatmentParams), [treatmentParams]);
@@ -201,7 +202,7 @@ export default function CasePage() {
   }, [caseId]);
 
   useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   if (!caseData) {
@@ -379,6 +380,7 @@ export default function CasePage() {
                     <div className="bg-gray-100 rounded-lg p-2"><Loader2 className="w-3 h-3 animate-spin text-purple-600" /></div>
                   </div>
                 )}
+                <div ref={messagesEndRef} />
               </div>
             </ScrollArea>
             <div className="p-2 border-t flex-shrink-0">
