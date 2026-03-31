@@ -238,6 +238,23 @@ export default function CasePage() {
       <div className="flex-1 flex gap-3 p-3 min-h-0">
         {/* 左列：数据 + 图片 */}
         <div className="w-1/3 flex flex-col gap-3 min-h-0">
+          {/* 生态瓶图片 - 放到最上面，给足够空间 */}
+          <Card className="flex-shrink-0">
+            <CardHeader className="py-2 px-3">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <ImageIcon className="w-4 h-4 text-green-500" />生态瓶 🏥
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-2 pt-0">
+              <div className="relative rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+                <img src={treatmentImage || CASE_IMAGES[caseId]?.sick} alt="生态瓶" className="w-full h-40 object-contain" />
+                <div className={`absolute top-1 left-1 px-2 py-0.5 rounded text-[10px] font-bold ${treatmentImage ? 'bg-green-500' : 'bg-red-500'} text-white`}>
+                  {treatmentImage ? '✅ 治疗中' : '⚠️ 生病中'}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* 数据图表 */}
           <Card className="flex-1 flex flex-col min-h-0">
             <CardHeader className="py-2 px-3 flex-shrink-0">
@@ -270,23 +287,6 @@ export default function CasePage() {
                 <div className="p-1 bg-red-50 rounded text-center">
                   <Beaker className="w-3 h-3 mx-auto text-red-500" />
                   <p className="text-[10px]">废物高</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* 生态瓶图片 */}
-          <Card className="flex-shrink-0">
-            <CardHeader className="py-2 px-3">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <ImageIcon className="w-4 h-4 text-green-500" />生态瓶 🏥
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-2 pt-0">
-              <div className="relative rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
-                <img src={treatmentImage || CASE_IMAGES[caseId]?.sick} alt="生态瓶" className="w-full h-28 object-cover" />
-                <div className={`absolute top-1 left-1 px-2 py-0.5 rounded text-[10px] font-bold ${treatmentImage ? 'bg-green-500' : 'bg-red-500'} text-white`}>
-                  {treatmentImage ? '✅ 治疗中' : '⚠️ 生病中'}
                 </div>
               </div>
             </CardContent>
