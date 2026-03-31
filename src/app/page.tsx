@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
   Dialog,
@@ -13,7 +13,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Globe, FlaskConical, Leaf, Search, Download, User, FileText, Loader2 } from 'lucide-react';
+import { Globe, FlaskConical, Leaf, TreePine, Search, Download, User, FileText, Loader2 } from 'lucide-react';
 
 // 模块名称映射
 const MODULE_NAMES: Record<string, string> = {
@@ -113,26 +113,40 @@ export default function Home() {
   };
 
   return (
-    <div className="h-screen overflow-hidden bg-gradient-to-b from-green-50 to-blue-50 dark:from-green-950 dark:to-blue-950 flex flex-col">
-      {/* Header - 紧凑 */}
-      <div className="flex-shrink-0 px-4 py-3 border-b bg-white/50 dark:bg-gray-900/50">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Leaf className="w-6 h-6 text-green-500" />
-            <h1 className="text-lg font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
-              生态危机拯救计划
-            </h1>
+    <div className="min-h-screen bg-gradient-to-b from-green-50 to-blue-50 dark:from-green-950 dark:to-blue-950">
+      <div className="container mx-auto px-4 py-6">
+        {/* Hero Section - 紧凑版 */}
+        <div className="text-center mb-6">
+          <div className="flex justify-center mb-3">
+            <div className="relative">
+              <Leaf className="w-16 h-16 text-green-500 animate-pulse" />
+              <TreePine className="w-10 h-10 text-emerald-600 absolute -right-3 -bottom-1 animate-bounce" />
+            </div>
           </div>
-          
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent mb-2">
+            生态危机拯救计划
+          </h1>
+          <p className="text-base text-gray-600 dark:text-gray-300 max-w-xl mx-auto">
+            神秘的"生态王国"突然出现失衡：草地的生物消失了，森林的河流干涸了……
+          </p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            你是被召唤来的<span className="font-bold text-green-600">"生态守护者"</span>，
+            需要借助<span className="font-bold text-blue-600">"生态AI助手"</span>的力量，恢复生态平衡！
+          </p>
+
           {/* 学生ID区域 */}
-          <div className="flex items-center gap-2">
+          <div className="mt-3 flex items-center justify-center gap-4">
             {studentId ? (
-              <div className="flex items-center gap-2 bg-white dark:bg-gray-800 px-3 py-1.5 rounded-full border">
+              <div className="flex items-center gap-2 bg-white/80 dark:bg-gray-800/80 px-3 py-1.5 rounded-full border-2 border-green-200 dark:border-green-800">
                 <User className="w-4 h-4 text-green-600" />
-                <span className="text-sm font-medium">{studentName || studentId}</span>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {studentName || studentId}
+                </span>
                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-6 text-xs px-2">修改</Button>
+                    <Button variant="ghost" size="sm" className="text-xs h-6 px-2">
+                      修改
+                    </Button>
                   </DialogTrigger>
                   <StudentIdDialog
                     studentId={studentId}
@@ -147,7 +161,7 @@ export default function Home() {
             ) : (
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-1">
+                  <Button variant="outline" size="sm" className="gap-2 bg-white/80 dark:bg-gray-800/80">
                     <User className="w-4 h-4" />
                     输入学生ID
                   </Button>
@@ -164,121 +178,158 @@ export default function Home() {
             )}
           </div>
         </div>
-      </div>
 
-      {/* 主内容区 */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-6xl mx-auto px-4 py-4">
-          {/* 简介 */}
-          <p className="text-center text-gray-600 dark:text-gray-400 text-sm mb-4">
-            你是被召唤来的<span className="font-bold text-green-600">"生态守护者"</span>，
-            需要借助<span className="font-bold text-blue-600">"生态AI助手"</span>的力量恢复生态平衡！
-          </p>
+        {/* Main Cards */}
+        <div className="grid md:grid-cols-3 gap-4 max-w-6xl mx-auto mb-6">
+          {/* 重建生态星球 */}
+          <Card className="group hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-2 border-green-200 dark:border-green-800">
+            <CardHeader className="text-center pb-2">
+              <div className="mx-auto mb-3 w-14 h-14 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Globe className="w-7 h-7 text-white" />
+              </div>
+              <CardTitle className="text-xl font-bold text-green-700 dark:text-green-400">
+                重建生态星球
+              </CardTitle>
+              <CardDescription>
+                与AI助手对话，设计你的理想生态星球
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <ul className="space-y-1.5 text-sm text-gray-600 dark:text-gray-300">
+                <li className="flex items-start gap-2">
+                  <span className="text-green-500 mt-0.5">✦</span>
+                  <span>描述你心中的生态星球</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-500 mt-0.5">✦</span>
+                  <span>AI引导学习种群和生态系统概念</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-500 mt-0.5">✦</span>
+                  <span>AI生成你设计的生态星球图片</span>
+                </li>
+              </ul>
+              <Link href="/planet">
+                <Button className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold py-5 text-base">
+                  开始设计生态星球
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
 
-          {/* 三大模块卡片 */}
-          <div className="grid grid-cols-3 gap-4 mb-4">
-            {/* 重建生态星球 */}
-            <Card className="group hover:shadow-lg transition-all hover:-translate-y-1 bg-white/80 dark:bg-gray-800/80 border-green-200 dark:border-green-800">
-              <CardHeader className="text-center py-3">
-                <div className="mx-auto mb-2 w-12 h-12 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Globe className="w-6 h-6 text-white" />
-                </div>
-                <CardTitle className="text-base font-bold text-green-700 dark:text-green-400">
-                  重建生态星球
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0 pb-3">
-                <ul className="text-xs text-gray-600 dark:text-gray-300 space-y-1 mb-3">
-                  <li>✦ 描述理想生态星球</li>
-                  <li>✦ AI引导学习生态概念</li>
-                  <li>✦ 生成星球图片</li>
-                </ul>
-                <Link href="/planet">
-                  <Button className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-sm py-2">
-                    开始设计
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
+          {/* 设计生态瓶 */}
+          <Card className="group hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-2 border-blue-200 dark:border-blue-800">
+            <CardHeader className="text-center pb-2">
+              <div className="mx-auto mb-3 w-14 h-14 rounded-full bg-gradient-to-br from-blue-400 to-cyan-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <FlaskConical className="w-7 h-7 text-white" />
+              </div>
+              <CardTitle className="text-xl font-bold text-blue-700 dark:text-blue-400">
+                设计生态瓶
+              </CardTitle>
+              <CardDescription>
+                选择生物元素，创建微型生态系统
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <ul className="space-y-1.5 text-sm text-gray-600 dark:text-gray-300">
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-500 mt-0.5">✦</span>
+                  <span>选择水生或陆生生态瓶</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-500 mt-0.5">✦</span>
+                  <span>添加动物、植物、水、木头等元素</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-500 mt-0.5">✦</span>
+                  <span>实时监控环境数据（含氧量、湿度等）</span>
+                </li>
+              </ul>
+              <Link href="/bottle">
+                <Button className="w-full bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white font-semibold py-5 text-base">
+                  开始设计生态瓶
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
 
-            {/* 设计生态瓶 */}
-            <Card className="group hover:shadow-lg transition-all hover:-translate-y-1 bg-white/80 dark:bg-gray-800/80 border-blue-200 dark:border-blue-800">
-              <CardHeader className="text-center py-3">
-                <div className="mx-auto mb-2 w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-cyan-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <FlaskConical className="w-6 h-6 text-white" />
-                </div>
-                <CardTitle className="text-base font-bold text-blue-700 dark:text-blue-400">
-                  设计生态瓶
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0 pb-3">
-                <ul className="text-xs text-gray-600 dark:text-gray-300 space-y-1 mb-3">
-                  <li>✦ 水生/陆生生态瓶</li>
-                  <li>✦ 添加动物、植物元素</li>
-                  <li>✦ 实时监控环境数据</li>
-                </ul>
-                <Link href="/bottle">
-                  <Button className="w-full bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white text-sm py-2">
-                    开始设计
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
+          {/* 生态瓶小侦探 */}
+          <Card className="group hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-2 border-purple-200 dark:border-purple-800">
+            <CardHeader className="text-center pb-2">
+              <div className="mx-auto mb-3 w-14 h-14 rounded-full bg-gradient-to-br from-purple-400 to-pink-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Search className="w-7 h-7 text-white" />
+              </div>
+              <CardTitle className="text-xl font-bold text-purple-700 dark:text-purple-400">
+                生态瓶小侦探
+              </CardTitle>
+              <CardDescription>
+                诊断生态瓶疾病，成为生态医生
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <ul className="space-y-1.5 text-sm text-gray-600 dark:text-gray-300">
+                <li className="flex items-start gap-2">
+                  <span className="text-purple-500 mt-0.5">✦</span>
+                  <span>观察异常现象，分析数据曲线</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-purple-500 mt-0.5">✦</span>
+                  <span>AI侦探助手引导诊断过程</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-purple-500 mt-0.5">✦</span>
+                  <span>开处方治疗，观察恢复效果</span>
+                </li>
+              </ul>
+              <Link href="/detective">
+                <Button className="w-full bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white font-semibold py-5 text-base">
+                  开始诊断病例
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
 
-            {/* 生态瓶小侦探 */}
-            <Card className="group hover:shadow-lg transition-all hover:-translate-y-1 bg-white/80 dark:bg-gray-800/80 border-purple-200 dark:border-purple-800">
-              <CardHeader className="text-center py-3">
-                <div className="mx-auto mb-2 w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-pink-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Search className="w-6 h-6 text-white" />
-                </div>
-                <CardTitle className="text-base font-bold text-purple-700 dark:text-purple-400">
-                  生态瓶小侦探
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0 pb-3">
-                <ul className="text-xs text-gray-600 dark:text-gray-300 space-y-1 mb-3">
-                  <li>✦ 观察异常现象</li>
-                  <li>✦ AI引导诊断过程</li>
-                  <li>✦ 开处方治疗</li>
-                </ul>
-                <Link href="/detective">
-                  <Button className="w-full bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white text-sm py-2">
-                    开始诊断
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* 完成学习区域 */}
-          <div className="text-center">
-            <div className="inline-flex items-center gap-3 p-3 bg-white/60 dark:bg-gray-800/60 rounded-xl border border-gray-200 dark:border-gray-700">
-              <span className="text-sm text-gray-600 dark:text-gray-400">完成学习后：</span>
+        {/* 完成学习区域 */}
+        <div className="text-center mb-6">
+          <div className="inline-flex flex-col items-center gap-3 p-4 bg-white/60 dark:bg-gray-800/60 rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-600">
+            <p className="text-sm text-gray-600 dark:text-gray-400">完成学习后，可以查看和导出你的学习记录</p>
+            <div className="flex gap-3">
               <Button
                 variant="outline"
                 size="sm"
-                className="gap-1"
+                className="gap-2"
                 onClick={handleViewReport}
                 disabled={isExporting || !studentId}
               >
-                <FileText className="w-3.5 h-3.5" />
-                查看报告
+                <FileText className="w-4 h-4" />
+                查看学习报告
               </Button>
               <Button
                 size="sm"
-                className="gap-1 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
+                className="gap-2 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
                 onClick={handleExportJSON}
                 disabled={isExporting || !studentId}
               >
                 {isExporting ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
-                  <Download className="w-3.5 h-3.5" />
+                  <Download className="w-4 h-4" />
                 )}
-                导出记录
+                导出学习记录
               </Button>
             </div>
+            {!studentId && (
+              <p className="text-xs text-orange-500">请先输入学生ID</p>
+            )}
           </div>
+        </div>
+
+        {/* Footer */}
+        <div className="text-center text-gray-500 dark:text-gray-400">
+          <p className="text-sm">
+            🌱 让我们一起成为生态守护者，恢复生态王国的平衡！
+          </p>
         </div>
       </div>
 
@@ -316,7 +367,7 @@ export default function Home() {
               </div>
 
               {/* 详细记录 */}
-              {reportData.sessions?.map((sessionData: any, index: number) => (
+              {reportData.sessions?.map((sessionData: any) => (
                 <Card key={sessionData.session.id} className="overflow-hidden">
                   <CardHeader className="bg-gray-50 dark:bg-gray-800 py-3">
                     <div className="flex items-center justify-between">
