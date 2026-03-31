@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { VoiceInput } from '@/components/ui/voice-input';
 import { Slider } from '@/components/ui/slider';
 import { 
@@ -114,12 +113,10 @@ function calculateLandEnvironment(elements: Record<string, number>) {
   const beetleCount = elements['beetle'] || 0;
   const mossCount = elements['moss'] || 0;
   
-  // 湿度
   let humidity = 50;
   humidity += mossCount * 3;
   humidity -= antCount * 1;
   
-  // 有机物
   let organic = 30;
   organic += earthwormCount * 5;
   organic += pillbugCount * 3;
@@ -129,165 +126,85 @@ function calculateLandEnvironment(elements: Record<string, number>) {
   const stability = Math.max(0, 100 - Math.abs(humidity - 60) - Math.abs(organic - 40) - Math.max(0, totalAnimals - 10) * 3);
   
   return {
-    oxygen: Math.max(0, Math.min(100, Math.round(humidity))),  // 复用显示为湿度
-    waste: Math.max(0, Math.min(100, Math.round(organic))),    // 复用显示为有机物
+    oxygen: Math.max(0, Math.min(100, Math.round(humidity))),
+    waste: Math.max(0, Math.min(100, Math.round(organic))),
     stability: Math.max(0, Math.min(100, Math.round(stability))),
   };
 }
 
-// 生成AI反馈消息 - 水生
+// 生成反馈消息 - 水生
 function generateWaterFeedback(
-  prevElements: Record<string, number>,
-  newElements: Record<string, number>,
+  prevCount: number,
+  currCount: number,
+  elementName: string,
+  emoji: string,
   envData: ReturnType<typeof calculateWaterEnvironment>
 ): string | null {
-  const prev = {
-    fish: prevElements['zebra-fish'] || 0,
-    snail: prevElements['apple-snail'] || 0,
-    waterweed: prevElements['waterweed'] || 0,
-    duckweed: prevElements['duckweed'] || 0,
-    sand: prevElements['sand'] || 0,
-    stone: prevElements['stone'] || 0,
-  };
+  if (currCount <= prevCount) return null;
   
-  const curr = {
-    fish: newElements['zebra-fish'] || 0,
-    snail: newElements['apple-snail'] || 0,
-    waterweed: newElements['waterweed'] || 0,
-    duckweed: newElements['duckweed'] || 0,
-    sand: newElements['sand'] || 0,
-    stone: newElements['stone'] || 0,
-  };
-
-  const addedFish = curr.fish > prev.fish;
-  const addedSnail = curr.snail > prev.snail;
-  const addedWaterweed = curr.waterweed > prev.waterweed;
-  const addedDuckweed = curr.duckweed > prev.duckweed;
-  const addedSand = curr.sand > prev.sand;
-  const addedStone = curr.stone > prev.stone;
-
-  if (addedWaterweed) {
-    if (envData.oxygen < 50) {
-      return "水草来了！🌿 观察一下溶氧量有什么变化？这个数值对你想要养的小动物重要吗？🤔";
-    }
-    return "水草添加好了！🌿 看看溶氧量指标，它和之前有什么不同？";
+  switch (elementName) {
+    case 'zebra-fish':
+      if (envData.oxygen < 40) {
+        return `小鱼来了！🐟 看看左边的溶氧量指标——它的颜色是什么？这个数值说明了什么？`;
+      }
+      return "小鱼来了！🐟 观察一下溶氧量的变化，你发现了什么？";
+    case 'apple-snail':
+      return "苹果螺入住啦！🐌 看看废物浓度的变化，你发现了什么？";
+    case 'waterweed':
+      return "水草来了！🌿 观察一下溶氧量有什么变化？";
+    case 'duckweed':
+      return "浮萍漂浮在水面！🍀 它们会影响生态瓶里的什么呢？观察一下各项数据？";
+    case 'sand':
+      return "底砂铺好了！观察一下你的生态瓶，还有什么可以添加的吗？";
+    case 'stone':
+      return "石头放好了！🪨 它们在生态瓶里会起到什么作用呢？";
+    default:
+      return null;
   }
-  
-  if (addedDuckweed) {
-    return "浮萍漂浮在水面！🍀 它们会影响生态瓶里的什么呢？观察一下各项数据？";
-  }
-  
-  if (addedSand && curr.sand === 1) {
-    return "底砂铺好了！观察一下你的生态瓶，还有什么可以添加的吗？";
-  }
-  
-  if (addedStone) {
-    return "石头放好了！🪨 它们在生态瓶里会起到什么作用呢？";
-  }
-  
-  if (addedSnail) {
-    return "苹果螺入住啦！🐌 看看废物浓度的变化，你发现了什么？";
-  }
-  
-  if (addedFish) {
-    if (envData.oxygen < 40) {
-      return `小鱼来了！🐟 看看左边的溶氧量指标——它的颜色是什么？这个数值说明了什么？`;
-    }
-    if (envData.oxygen < 50) {
-      return `小鱼游起来了！🐟 观察溶氧量的变化，你觉得这个数值够吗？`;
-    }
-    if (curr.fish >= 3) {
-      return `鱼儿越来越多了！🐟🐟🐟 仔细看看溶氧量和废物浓度，你发现了什么规律？`;
-    }
-    return "小鱼来了！🐟 观察一下溶氧量的变化，小鱼需要什么才能呼吸呢？";
-  }
-
-  return null;
 }
 
-// 生成AI反馈消息 - 陆生
+// 生成反馈消息 - 陆生
 function generateLandFeedback(
-  prevElements: Record<string, number>,
-  newElements: Record<string, number>,
+  prevCount: number,
+  currCount: number,
+  elementName: string,
+  emoji: string,
   envData: ReturnType<typeof calculateLandEnvironment>
 ): string | null {
-  const prev = {
-    earthworm: prevElements['earthworm'] || 0,
-    ant: prevElements['ant'] || 0,
-    pillbug: prevElements['pillbug'] || 0,
-    beetle: prevElements['beetle'] || 0,
-    moss: prevElements['moss'] || 0,
-    soil: prevElements['soil'] || 0,
-    pebble: prevElements['pebble'] || 0,
-    deadwood: prevElements['deadwood'] || 0,
-  };
+  if (currCount <= prevCount) return null;
   
-  const curr = {
-    earthworm: newElements['earthworm'] || 0,
-    ant: newElements['ant'] || 0,
-    pillbug: newElements['pillbug'] || 0,
-    beetle: newElements['beetle'] || 0,
-    moss: newElements['moss'] || 0,
-    soil: newElements['soil'] || 0,
-    pebble: newElements['pebble'] || 0,
-    deadwood: newElements['deadwood'] || 0,
-  };
-
-  const addedEarthworm = curr.earthworm > prev.earthworm;
-  const addedAnt = curr.ant > prev.ant;
-  const addedPillbug = curr.pillbug > prev.pillbug;
-  const addedBeetle = curr.beetle > prev.beetle;
-  const addedMoss = curr.moss > prev.moss;
-  const addedSoil = curr.soil > prev.soil;
-  const addedPebble = curr.pebble > prev.pebble;
-  const addedDeadwood = curr.deadwood > prev.deadwood;
-
-  if (addedMoss) {
-    return "苔藓来了！🌱 观察一下湿度指标的变化，你发现了什么？";
+  switch (elementName) {
+    case 'earthworm':
+      return "蚯蚓入住啦！🪱 它们会帮忙松土。观察一下有机物的变化？";
+    case 'ant':
+      return "蚂蚁来了！🐜 它们很勤劳。看看各项指标的变化？";
+    case 'pillbug':
+      return "鼠妇入住啦！🪲 它们喜欢潮湿的环境。观察一下湿度指标？";
+    case 'beetle':
+      return "小甲虫来了！🪲 它们是小小捕食者。看看数据有什么变化？";
+    case 'moss':
+      return "苔藓来了！🌱 观察一下湿度指标的变化，你发现了什么？";
+    case 'soil':
+      return "土壤铺好了！这是小生物们的家。还要添加什么吗？";
+    case 'pebble':
+      return "石子放好了！🪨 它们可以帮助排水，观察一下各项数据？";
+    case 'deadwood':
+      return "枯木放好了！🪵 小昆虫们可以在上面休息。看看数据有什么变化？";
+    default:
+      return null;
   }
-  
-  if (addedSoil && curr.soil === 1) {
-    return "土壤铺好了！这是小生物们的家。还要添加什么吗？";
-  }
-  
-  if (addedPebble) {
-    return "石子放好了！🪨 它们可以帮助排水，观察一下各项数据？";
-  }
-  
-  if (addedDeadwood) {
-    return "枯木放好了！🪵 小昆虫们可以在上面休息。看看数据有什么变化？";
-  }
-  
-  if (addedEarthworm) {
-    return "蚯蚓入住啦！🪱 它们会帮忙松土。观察一下有机物的变化？";
-  }
-  
-  if (addedAnt) {
-    return "蚂蚁来了！🐜 它们很勤劳。看看各项指标的变化？";
-  }
-  
-  if (addedPillbug) {
-    return "鼠妇入住啦！🪲 它们喜欢潮湿的环境。观察一下湿度指标？";
-  }
-  
-  if (addedBeetle) {
-    return "小甲虫来了！🪲 它们是小小捕食者。看看数据有什么变化？";
-  }
-
-  return null;
 }
 
 export default function BottlePage() {
   const [bottleType, setBottleType] = useState<'water' | 'land' | null>(null);
   const [elements, setElements] = useState<Record<string, number>>({});
-  const [prevElements, setPrevElements] = useState<Record<string, number>>({});
   const [placedItems, setPlacedItems] = useState<PlacedItem[]>([]);
   const [lightHours, setLightHours] = useState(0);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [draggingItem, setDraggingItem] = useState<string | null>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const bottleRef = useRef<HTMLDivElement>(null);
 
   const currentElements = bottleType === 'water' ? WATER_ELEMENTS : LAND_ELEMENTS;
@@ -306,7 +223,6 @@ export default function BottlePage() {
 你可以从右边选择生物和材料添加到生态瓶中。试试看！`;
       setMessages([{ role: 'assistant', content: initialMessage }]);
       setElements({});
-      setPrevElements({});
       setPlacedItems([]);
       setLightHours(0);
     }
@@ -314,30 +230,8 @@ export default function BottlePage() {
 
   // 自动滚动到底部
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
-
-  // 当元素变化时生成反馈
-  useEffect(() => {
-    if (!bottleType) return;
-    
-    if (Object.keys(prevElements).length === 0 || 
-        JSON.stringify(prevElements) === JSON.stringify(elements)) {
-      return;
-    }
-    
-    const feedback = bottleType === 'water'
-      ? generateWaterFeedback(prevElements, elements, envData)
-      : generateLandFeedback(prevElements, elements, envData);
-      
-    if (feedback) {
-      setMessages(prev => [...prev, { role: 'assistant', content: feedback }]);
-    }
-    
-    setPrevElements({ ...elements });
-  }, [elements, bottleType]);
 
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return;
@@ -380,29 +274,47 @@ export default function BottlePage() {
   };
 
   const handleElementChange = (elementId: string, delta: number, emoji: string, size: 'normal' | 'small' = 'normal', noDisplay: boolean = false) => {
+    const prevCount = elements[elementId] || 0;
+    
     setElements(prev => {
       const current = prev[elementId] || 0;
       const newValue = Math.max(0, current + delta);
       return { ...prev, [elementId]: newValue };
     });
     
-    if (noDisplay) return;
-    
+    // 添加时在生态瓶中放置并生成反馈
     if (delta > 0) {
-      const bottle = bottleRef.current;
-      if (bottle) {
-        const rect = bottle.getBoundingClientRect();
-        const newItem: PlacedItem = {
-          id: `${elementId}-${Date.now()}`,
-          elementId,
-          emoji,
-          x: Math.random() * (rect.width - 50) + 25,
-          y: Math.random() * (rect.height - 100) + 70,
-          size,
-        };
-        setPlacedItems(prev => [...prev, newItem]);
+      const newCount = prevCount + 1;
+      
+      // 生成反馈
+      const feedback = bottleType === 'water'
+        ? generateWaterFeedback(prevCount, newCount, elementId, emoji, envData)
+        : generateLandFeedback(prevCount, newCount, elementId, emoji, envData);
+      
+      if (feedback) {
+        setTimeout(() => {
+          setMessages(prev => [...prev, { role: 'assistant', content: feedback }]);
+        }, 300);
+      }
+      
+      // 添加到生态瓶显示
+      if (!noDisplay) {
+        const bottle = bottleRef.current;
+        if (bottle) {
+          const rect = bottle.getBoundingClientRect();
+          const newItem: PlacedItem = {
+            id: `${elementId}-${Date.now()}`,
+            elementId,
+            emoji,
+            x: Math.random() * (rect.width - 50) + 25,
+            y: Math.random() * (rect.height - 100) + 70,
+            size,
+          };
+          setPlacedItems(prev => [...prev, newItem]);
+        }
       }
     } else {
+      // 移除
       setPlacedItems(prev => {
         const idx = prev.map(item => item.elementId).lastIndexOf(elementId);
         if (idx !== -1) {
@@ -411,36 +323,6 @@ export default function BottlePage() {
         return prev;
       });
     }
-  };
-
-  const handleDragStart = (itemId: string) => {
-    setDraggingItem(itemId);
-  };
-
-  const handleDrag = useCallback((e: React.MouseEvent | React.TouchEvent, itemId: string) => {
-    if (!bottleRef.current) return;
-    const bottle = bottleRef.current;
-    const rect = bottle.getBoundingClientRect();
-    
-    let clientX, clientY;
-    if ('touches' in e) {
-      clientX = e.touches[0].clientX;
-      clientY = e.touches[0].clientY;
-    } else {
-      clientX = e.clientX;
-      clientY = e.clientY;
-    }
-    
-    const x = Math.max(20, Math.min(rect.width - 20, clientX - rect.left));
-    const y = Math.max(70, Math.min(rect.height - 20, clientY - rect.top));
-    
-    setPlacedItems(prev => prev.map(item => 
-      item.id === itemId ? { ...item, x, y } : item
-    ));
-  }, []);
-
-  const handleDragEnd = () => {
-    setDraggingItem(null);
   };
 
   // 选择类型界面
@@ -467,7 +349,6 @@ export default function BottlePage() {
             <p className="text-center text-gray-600 mb-8">你想设计哪种生态瓶呢？</p>
             
             <div className="grid grid-cols-2 gap-6">
-              {/* 水生生态瓶 */}
               <Card 
                 className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-blue-400"
                 onClick={() => setBottleType('water')}
@@ -485,7 +366,6 @@ export default function BottlePage() {
                 </CardContent>
               </Card>
 
-              {/* 陆生生态瓶 */}
               <Card 
                 className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-green-400"
                 onClick={() => setBottleType('land')}
@@ -530,10 +410,10 @@ export default function BottlePage() {
       {/* 主内容区 */}
       <div className="flex-1 flex gap-3 p-3 min-h-0">
         {/* 左列：生态瓶展示 */}
-        <div className="w-[45%] flex flex-col gap-3 min-h-0">
+        <div className="w-[45%] flex flex-col gap-2 min-h-0">
           {/* 生态瓶 */}
           <Card className="flex-1 flex flex-col min-h-0">
-            <CardContent className="flex-1 p-3 min-h-0">
+            <CardContent className="flex-1 p-2 min-h-0">
               <div 
                 ref={bottleRef}
                 className={`relative w-full h-full rounded-xl overflow-hidden border-4 ${
@@ -541,18 +421,20 @@ export default function BottlePage() {
                 }`}
                 style={{
                   background: bottleType === 'water'
-                    ? elements.sand > 0 
-                      ? 'linear-gradient(to bottom, #e0f7fa 0%, #b2ebf2 30%, #80deea 100%)'
-                      : 'linear-gradient(to bottom, #e0f7fa 0%, #b2ebf2 30%, #80deea 100%)'
-                    : elements.soil > 0
-                      ? 'linear-gradient(to bottom, #dcedc8 0%, #c5e1a5 50%, #8bc34a 100%)'
-                      : 'linear-gradient(to bottom, #f5f5f5 0%, #e0e0e0 50%, #bdbdbd 100%)',
+                    ? 'linear-gradient(to bottom, #e0f7fa 0%, #b2ebf2 30%, #80deea 100%)'
+                    : 'linear-gradient(to bottom, #dcedc8 0%, #c5e1a5 50%, #8bc34a 100%)',
                 }}
-                onMouseMove={(e) => draggingItem && handleDrag(e, draggingItem)}
-                onMouseUp={handleDragEnd}
-                onMouseLeave={handleDragEnd}
-                onTouchMove={(e) => draggingItem && handleDrag(e, draggingItem)}
-                onTouchEnd={handleDragEnd}
+                onMouseMove={(e) => {
+                  if (!draggingItem || !bottleRef.current) return;
+                  const rect = bottleRef.current.getBoundingClientRect();
+                  const x = Math.max(20, Math.min(rect.width - 20, e.clientX - rect.left));
+                  const y = Math.max(70, Math.min(rect.height - 20, e.clientY - rect.top));
+                  setPlacedItems(prev => prev.map(item => 
+                    item.id === draggingItem ? { ...item, x, y } : item
+                  ));
+                }}
+                onMouseUp={() => setDraggingItem(null)}
+                onMouseLeave={() => setDraggingItem(null)}
               >
                 {/* 水生 - 水层 */}
                 {bottleType === 'water' && (
@@ -582,8 +464,8 @@ export default function BottlePage() {
                     key={item.id}
                     className={`absolute cursor-move select-none transition-transform hover:scale-110 ${item.size === 'small' ? 'text-xl' : 'text-3xl'}`}
                     style={{ left: item.x - (item.size === 'small' ? 10 : 15), top: item.y - (item.size === 'small' ? 10 : 15) }}
-                    onMouseDown={() => handleDragStart(item.id)}
-                    onTouchStart={() => handleDragStart(item.id)}
+                    onMouseDown={() => setDraggingItem(item.id)}
+                    onTouchStart={() => setDraggingItem(item.id)}
                   >
                     {item.emoji}
                   </div>
@@ -600,8 +482,8 @@ export default function BottlePage() {
 
           {/* 环境指标 */}
           <Card className="flex-shrink-0">
-            <CardContent className="p-3">
-              <div className="grid grid-cols-3 gap-3">
+            <CardContent className="p-2">
+              <div className="grid grid-cols-3 gap-2">
                 {bottleType === 'water' ? (
                   <>
                     <div className="text-center">
@@ -609,7 +491,7 @@ export default function BottlePage() {
                         <Wind className="w-4 h-4 text-blue-500" />
                         <span className="text-xs text-gray-500">溶氧量</span>
                       </div>
-                      <p className={`text-2xl font-bold ${envData.oxygen >= 50 ? 'text-green-600' : 'text-red-500'}`}>
+                      <p className={`text-xl font-bold ${envData.oxygen >= 50 ? 'text-green-600' : 'text-red-500'}`}>
                         {envData.oxygen}%
                       </p>
                     </div>
@@ -618,7 +500,7 @@ export default function BottlePage() {
                         <Droplets className="w-4 h-4 text-red-500" />
                         <span className="text-xs text-gray-500">废物</span>
                       </div>
-                      <p className={`text-2xl font-bold ${envData.waste < 40 ? 'text-green-600' : 'text-red-500'}`}>
+                      <p className={`text-xl font-bold ${envData.waste < 40 ? 'text-green-600' : 'text-red-500'}`}>
                         {envData.waste}%
                       </p>
                     </div>
@@ -630,7 +512,7 @@ export default function BottlePage() {
                         <Droplets className="w-4 h-4 text-blue-500" />
                         <span className="text-xs text-gray-500">湿度</span>
                       </div>
-                      <p className={`text-2xl font-bold ${envData.oxygen >= 50 ? 'text-green-600' : 'text-yellow-500'}`}>
+                      <p className={`text-xl font-bold ${envData.oxygen >= 50 ? 'text-green-600' : 'text-yellow-500'}`}>
                         {envData.oxygen}%
                       </p>
                     </div>
@@ -639,7 +521,7 @@ export default function BottlePage() {
                         <span className="text-xs text-gray-500">🍂</span>
                         <span className="text-xs text-gray-500">有机物</span>
                       </div>
-                      <p className={`text-2xl font-bold ${envData.waste < 50 ? 'text-green-600' : 'text-yellow-500'}`}>
+                      <p className={`text-xl font-bold ${envData.waste < 50 ? 'text-green-600' : 'text-yellow-500'}`}>
                         {envData.waste}%
                       </p>
                     </div>
@@ -650,7 +532,7 @@ export default function BottlePage() {
                     <Sparkles className="w-4 h-4 text-purple-500" />
                     <span className="text-xs text-gray-500">稳定性</span>
                   </div>
-                  <p className={`text-2xl font-bold ${envData.stability >= 50 ? 'text-green-600' : 'text-yellow-500'}`}>
+                  <p className={`text-xl font-bold ${envData.stability >= 50 ? 'text-green-600' : 'text-yellow-500'}`}>
                     {envData.stability}%
                   </p>
                 </div>
@@ -660,13 +542,13 @@ export default function BottlePage() {
 
           {/* 光照调节 */}
           <Card className="flex-shrink-0">
-            <CardContent className="p-3">
-              <div className="flex items-center gap-3">
-                <Sun className="w-5 h-5 text-yellow-500" />
+            <CardContent className="p-2">
+              <div className="flex items-center gap-2">
+                <Sun className="w-4 h-4 text-yellow-500" />
                 <div className="flex-1">
                   <div className="flex justify-between text-xs mb-1">
-                    <span className="text-gray-500">光照时间</span>
-                    <span className="font-bold">{lightHours} 小时/天</span>
+                    <span className="text-gray-500">光照</span>
+                    <span className="font-bold">{lightHours}h</span>
                   </div>
                   <Slider
                     value={[lightHours]}
@@ -682,75 +564,27 @@ export default function BottlePage() {
         </div>
 
         {/* 右列：元素选择 + AI对话 */}
-        <div className="flex-1 flex flex-col gap-3 min-h-0">
-          {/* 元素选择 */}
-          <Card className="flex-shrink-0">
-            <CardHeader className="py-2 px-3">
+        <div className="flex-1 flex flex-col gap-2 min-h-0">
+          {/* 元素选择 - 缩小高度 */}
+          <Card className="flex-shrink-0 max-h-[180px] overflow-hidden">
+            <CardHeader className="py-1 px-3">
               <CardTitle className="text-sm">添加生物和材料</CardTitle>
             </CardHeader>
-            <CardContent className="p-3">
-              <div className="grid grid-cols-2 gap-3">
-                {/* 动物 */}
-                {currentElements.animals.map(element => (
-                  <div key={element.id} className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded-lg border">
-                    <div className="flex items-center gap-2">
-                      <span className={`text-2xl ${element.size === 'small' ? 'scale-75' : ''}`}>{element.emoji}</span>
-                      <div>
-                        <p className="text-xs font-medium">{element.name}</p>
-                        <p className="text-[10px] text-gray-400">{element.hint}</p>
-                      </div>
-                    </div>
+            <CardContent className="p-2 pt-0">
+              <div className="grid grid-cols-3 gap-1.5">
+                {[...currentElements.animals, ...currentElements.plants, ...currentElements.materials].map(element => (
+                  <div key={element.id} className="flex items-center justify-between p-1.5 bg-white dark:bg-gray-800 rounded border">
                     <div className="flex items-center gap-1">
-                      <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => handleElementChange(element.id, -1, element.emoji, element.size, element.noDisplay)} disabled={!elements[element.id]}>
-                        <Minus className="w-3 h-3" />
-                      </Button>
-                      <span className="w-6 text-center text-sm font-bold">{elements[element.id] || 0}</span>
-                      <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => handleElementChange(element.id, 1, element.emoji, element.size, element.noDisplay)} disabled={(elements[element.id] || 0) >= element.max}>
-                        <Plus className="w-3 h-3" />
-                      </Button>
+                      <span className={`text-lg ${element.size === 'small' ? 'scale-75' : ''}`}>{element.emoji}</span>
+                      <span className="text-[10px] font-medium">{element.name}</span>
                     </div>
-                  </div>
-                ))}
-                
-                {/* 植物 */}
-                {currentElements.plants.map(element => (
-                  <div key={element.id} className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded-lg border">
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl">{element.emoji}</span>
-                      <div>
-                        <p className="text-xs font-medium">{element.name}</p>
-                        <p className="text-[10px] text-gray-400">{element.hint}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => handleElementChange(element.id, -1, element.emoji, element.size, element.noDisplay)} disabled={!elements[element.id]}>
-                        <Minus className="w-3 h-3" />
+                    <div className="flex items-center gap-0.5">
+                      <Button size="icon" variant="outline" className="h-5 w-5" onClick={() => handleElementChange(element.id, -1, element.emoji, element.size, element.noDisplay)} disabled={!elements[element.id]}>
+                        <Minus className="w-2 h-2" />
                       </Button>
-                      <span className="w-6 text-center text-sm font-bold">{elements[element.id] || 0}</span>
-                      <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => handleElementChange(element.id, 1, element.emoji, element.size, element.noDisplay)} disabled={(elements[element.id] || 0) >= element.max}>
-                        <Plus className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-                
-                {/* 材料 */}
-                {currentElements.materials.map(element => (
-                  <div key={element.id} className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded-lg border">
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl">{element.emoji}</span>
-                      <div>
-                        <p className="text-xs font-medium">{element.name}</p>
-                        <p className="text-[10px] text-gray-400">{element.hint}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => handleElementChange(element.id, -1, element.emoji, element.size, element.noDisplay)} disabled={!elements[element.id]}>
-                        <Minus className="w-3 h-3" />
-                      </Button>
-                      <span className="w-6 text-center text-sm font-bold">{elements[element.id] || 0}</span>
-                      <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => handleElementChange(element.id, 1, element.emoji, element.size, element.noDisplay)} disabled={(elements[element.id] || 0) >= element.max}>
-                        <Plus className="w-3 h-3" />
+                      <span className="w-4 text-center text-xs font-bold">{elements[element.id] || 0}</span>
+                      <Button size="icon" variant="outline" className="h-5 w-5" onClick={() => handleElementChange(element.id, 1, element.emoji, element.size, element.noDisplay)} disabled={(elements[element.id] || 0) >= element.max}>
+                        <Plus className="w-2 h-2" />
                       </Button>
                     </div>
                   </div>
@@ -759,7 +593,7 @@ export default function BottlePage() {
             </CardContent>
           </Card>
 
-          {/* AI对话 */}
+          {/* AI对话 - 增大高度 */}
           <Card className="flex-1 flex flex-col min-h-0">
             <CardHeader className="py-2 px-3 border-b flex-shrink-0">
               <CardTitle className="text-sm flex items-center gap-2">
@@ -767,8 +601,9 @@ export default function BottlePage() {
                 AI助手 🌱
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex-1 flex flex-col p-0 min-h-0">
-              <ScrollArea ref={scrollRef} className="flex-1 p-3 h-0">
+            <CardContent className="flex-1 flex flex-col p-0 min-h-0 overflow-hidden">
+              {/* 消息列表 - 可滚动 */}
+              <div className="flex-1 overflow-y-auto p-3">
                 <div className="space-y-2">
                   {messages.map((msg, idx) => (
                     <div key={idx} className={`flex gap-1 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -784,8 +619,11 @@ export default function BottlePage() {
                       </div>
                     </div>
                   )}
+                  {/* 滚动锚点 */}
+                  <div ref={messagesEndRef} />
                 </div>
-              </ScrollArea>
+              </div>
+              {/* 输入框 */}
               <div className="p-2 border-t flex-shrink-0">
                 <div className="flex gap-1">
                   <Input
