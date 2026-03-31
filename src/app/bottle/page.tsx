@@ -24,21 +24,32 @@ interface PlacedItem {
   emoji: string;
   x: number;
   y: number;
+  size: 'normal' | 'small';
+}
+
+interface WaterElement {
+  id: string;
+  name: string;
+  emoji: string;
+  max: number;
+  hint: string;
+  size?: 'normal' | 'small';
+  noDisplay?: boolean;
 }
 
 // 水生生态瓶元素
-const WATER_ELEMENTS = {
+const WATER_ELEMENTS: { animals: WaterElement[]; plants: WaterElement[]; materials: WaterElement[] } = {
   animals: [
-    { id: 'zebra-fish', name: '斑马鱼', emoji: '🐟', max: 5, hint: '活泼好动，需要氧气' },
-    { id: 'apple-snail', name: '苹果螺', emoji: '🐌', max: 5, hint: '吃藻类，清洁水质' },
+    { id: 'zebra-fish', name: '斑马鱼', emoji: '🐟', max: 5, hint: '活泼好动，需要氧气', size: 'normal' },
+    { id: 'apple-snail', name: '苹果螺', emoji: '🐌', max: 5, hint: '吃藻类，清洁水质', size: 'small' },
   ],
   plants: [
-    { id: 'waterweed', name: '蜈蚣草', emoji: '🌿', max: 10, hint: '产生氧气' },
-    { id: 'duckweed', name: '浮萍', emoji: '🍀', max: 15, hint: '遮阳降温' },
+    { id: 'waterweed', name: '蜈蚣草', emoji: '🌿', max: 10, hint: '产生氧气', size: 'normal' },
+    { id: 'duckweed', name: '浮萍', emoji: '🍀', max: 15, hint: '遮阳降温', size: 'normal' },
   ],
   materials: [
-    { id: 'sand', name: '底砂', emoji: '⬜', max: 1, hint: '铺满底部', fillBottom: true },
-    { id: 'stone', name: '石头', emoji: '🪨', max: 5, hint: '装饰躲避' },
+    { id: 'sand', name: '底砂', emoji: '⬜', max: 1, hint: '铺满底部', size: 'normal', noDisplay: true },
+    { id: 'stone', name: '石头', emoji: '🪨', max: 5, hint: '装饰躲避', size: 'normal' },
   ],
 };
 
@@ -171,12 +182,15 @@ export default function BottlePage() {
     }
   };
 
-  const handleElementChange = (elementId: string, delta: number, emoji: string) => {
+  const handleElementChange = (elementId: string, delta: number, emoji: string, size: 'normal' | 'small' = 'normal', noDisplay: boolean = false) => {
     setElements(prev => {
       const current = prev[elementId] || 0;
       const newValue = Math.max(0, current + delta);
       return { ...prev, [elementId]: newValue };
     });
+    
+    // 如果是底砂等不需要显示的元素，不添加到生态瓶中
+    if (noDisplay) return;
     
     // 添加时在生态瓶中放置
     if (delta > 0) {
@@ -189,6 +203,7 @@ export default function BottlePage() {
           emoji,
           x: Math.random() * (rect.width - 50) + 25,
           y: Math.random() * (rect.height - 100) + 70,
+          size,
         };
         setPlacedItems(prev => [...prev, newItem]);
       }
@@ -292,8 +307,8 @@ export default function BottlePage() {
                 {placedItems.map(item => (
                   <div
                     key={item.id}
-                    className="absolute cursor-move select-none text-3xl transition-transform hover:scale-110"
-                    style={{ left: item.x - 15, top: item.y - 15 }}
+                    className={`absolute cursor-move select-none transition-transform hover:scale-110 ${item.size === 'small' ? 'text-xl' : 'text-3xl'}`}
+                    style={{ left: item.x - (item.size === 'small' ? 10 : 15), top: item.y - (item.size === 'small' ? 10 : 15) }}
                     onMouseDown={() => handleDragStart(item.id)}
                     onTouchStart={() => handleDragStart(item.id)}
                   >
@@ -381,18 +396,18 @@ export default function BottlePage() {
                 {WATER_ELEMENTS.animals.map(element => (
                   <div key={element.id} className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded-lg border">
                     <div className="flex items-center gap-2">
-                      <span className="text-2xl">{element.emoji}</span>
+                      <span className={`text-2xl ${element.size === 'small' ? 'scale-75' : ''}`}>{element.emoji}</span>
                       <div>
                         <p className="text-xs font-medium">{element.name}</p>
                         <p className="text-[10px] text-gray-400">{element.hint}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
-                      <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => handleElementChange(element.id, -1, element.emoji)} disabled={!elements[element.id]}>
+                      <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => handleElementChange(element.id, -1, element.emoji, element.size, element.noDisplay)} disabled={!elements[element.id]}>
                         <Minus className="w-3 h-3" />
                       </Button>
                       <span className="w-6 text-center text-sm font-bold">{elements[element.id] || 0}</span>
-                      <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => handleElementChange(element.id, 1, element.emoji)} disabled={(elements[element.id] || 0) >= element.max}>
+                      <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => handleElementChange(element.id, 1, element.emoji, element.size, element.noDisplay)} disabled={(elements[element.id] || 0) >= element.max}>
                         <Plus className="w-3 h-3" />
                       </Button>
                     </div>
@@ -410,11 +425,11 @@ export default function BottlePage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
-                      <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => handleElementChange(element.id, -1, element.emoji)} disabled={!elements[element.id]}>
+                      <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => handleElementChange(element.id, -1, element.emoji, element.size, element.noDisplay)} disabled={!elements[element.id]}>
                         <Minus className="w-3 h-3" />
                       </Button>
                       <span className="w-6 text-center text-sm font-bold">{elements[element.id] || 0}</span>
-                      <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => handleElementChange(element.id, 1, element.emoji)} disabled={(elements[element.id] || 0) >= element.max}>
+                      <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => handleElementChange(element.id, 1, element.emoji, element.size, element.noDisplay)} disabled={(elements[element.id] || 0) >= element.max}>
                         <Plus className="w-3 h-3" />
                       </Button>
                     </div>
@@ -432,11 +447,11 @@ export default function BottlePage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
-                      <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => handleElementChange(element.id, -1, element.emoji)} disabled={!elements[element.id]}>
+                      <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => handleElementChange(element.id, -1, element.emoji, element.size, element.noDisplay)} disabled={!elements[element.id]}>
                         <Minus className="w-3 h-3" />
                       </Button>
                       <span className="w-6 text-center text-sm font-bold">{elements[element.id] || 0}</span>
-                      <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => handleElementChange(element.id, 1, element.emoji)} disabled={(elements[element.id] || 0) >= element.max}>
+                      <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => handleElementChange(element.id, 1, element.emoji, element.size, element.noDisplay)} disabled={(elements[element.id] || 0) >= element.max}>
                         <Plus className="w-3 h-3" />
                       </Button>
                     </div>
