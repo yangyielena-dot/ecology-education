@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,8 @@ import {
 } from 'recharts';
 import { 
   ArrowLeft, Send, Loader2, Fish, Droplets, Skull, 
-  Thermometer, Sun, Activity, Beaker, Stethoscope, Sparkles, Image as ImageIcon
+  Thermometer, Sun, Activity, Beaker, Stethoscope, Sparkles, Image as ImageIcon,
+  TrendingUp, TrendingDown, Minus
 } from 'lucide-react';
 
 // 病例图片配置
@@ -30,6 +31,26 @@ const CASE_IMAGES: Record<string, { sick: string }> = {
   },
 };
 
+// 计算预测数据的函数
+function calculatePredictedData(params: { fishCount: number; plantDensity: number; lightHours: number; feedingAmount: number }) {
+  // 溶氧量计算：光照时间增加产氧，水草密度适中最好，鱼多消耗多
+  const oxygenProduction = params.lightHours * 0.6 + (params.plantDensity > 30 && params.plantDensity < 70 ? 2 : params.plantDensity >= 70 ? 1 : 0.5);
+  const oxygenConsumption = params.fishCount * 0.5 + (params.plantDensity > 70 ? 1.5 : 0.5);
+  const oxygenLevel = Math.max(1, Math.min(10, oxygenProduction - oxygenConsumption + 5));
+  
+  // 废物浓度：投喂多产生多，鱼多产生多
+  const wasteLevel = params.feedingAmount * 2 + params.fishCount * 1.5 - (params.plantDensity > 40 ? 5 : 0);
+  
+  // 水质清澈度：藻类多则浑浊
+  const algaeGrowth = params.lightHours > 10 && params.feedingAmount > 5 ? '高' : params.lightHours > 8 && params.feedingAmount > 3 ? '中' : '低';
+  
+  return {
+    oxygen: Math.round(oxygenLevel * 10) / 10,
+    waste: Math.max(5, Math.round(wasteLevel)),
+    algae: algaeGrowth,
+  };
+}
+
 // 病例数据配置
 const CASE_DATA: Record<string, {
   name: string;
@@ -38,6 +59,7 @@ const CASE_DATA: Record<string, {
   story: string;
   initialMessage: string;
   data: any[];
+  currentData: { oxygen: number; waste: number; algae: string };
   parameters: { fishCount: number; plantDensity: number; lightHours: number; feedingAmount: number; };
   treatmentHints: string[];
 }> = {
@@ -61,6 +83,7 @@ const CASE_DATA: Record<string, {
       { time: '18点', oxygen: 3.5 },
       { time: '21点', oxygen: 4.2 },
     ],
+    currentData: { oxygen: 2.8, waste: 14, algae: '低' },
     parameters: { fishCount: 3, plantDensity: 80, lightHours: 8, feedingAmount: 5 },
     treatmentHints: ['💡 水草太多，晚上消耗氧气', '💡 光照时间短，产氧不够', '💡 试试减少水草或增加光照'],
   },
@@ -84,6 +107,7 @@ const CASE_DATA: Record<string, {
       { time: '18点', oxygen: 5.5 },
       { time: '21点', oxygen: 3.8 },
     ],
+    currentData: { oxygen: 5.5, waste: 28, algae: '高' },
     parameters: { fishCount: 5, plantDensity: 40, lightHours: 12, feedingAmount: 8 },
     treatmentHints: ['💡 绿色说明藻类大量繁殖', '💡 藻类喜欢阳光和鱼食残渣', '💡 试试减少光照和投喂'],
   },
@@ -107,12 +131,49 @@ const CASE_DATA: Record<string, {
       { time: '18点', oxygen: 1.0 },
       { time: '21点', oxygen: 0.8 },
     ],
+    currentData: { oxygen: 1.2, waste: 48, algae: '低' },
     parameters: { fishCount: 8, plantDensity: 20, lightHours: 6, feedingAmount: 12 },
     treatmentHints: ['💡 生物太多，超过承载能力', '💡 投喂太多产生大量废物', '💡 水草太少无法提供氧气'],
   },
 };
 
 interface Message { role: 'user' | 'assistant'; content: string; }
+
+// 数据指标组件
+function DataIndicator({ label, value, unit, healthy, predicted, prevValue }: {
+  label: string;
+  value: number | string;
+  unit?: string;
+  healthy: boolean;
+  predicted?: boolean;
+  prevValue?: number;
+}) {
+  const trend = prevValue !== undefined && typeof value === 'number' 
+    ? value > prevValue ? 'up' : value < prevValue ? 'down' : 'same'
+    : null;
+  
+  return (
+    <div className={`p-2 rounded-lg ${predicted ? 'bg-purple-50 dark:bg-purple-900/20 border border-purple-200' : 'bg-white dark:bg-gray-800 border'} ${!healthy ? 'border-red-300' : 'border-green-300'}`}>
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-[10px] text-gray-500">{predicted ? '📈 预测' : '📊 当前'}</span>
+        {trend && (
+          <span className="text-[10px]">
+            {trend === 'up' && <TrendingUp className="w-3 h-3 text-green-500" />}
+            {trend === 'down' && <TrendingDown className="w-3 h-3 text-red-500" />}
+            {trend === 'same' && <Minus className="w-3 h-3 text-gray-400" />}
+          </span>
+        )}
+      </div>
+      <div className="flex items-baseline gap-1">
+        <span className={`text-lg font-bold ${healthy ? 'text-green-600' : 'text-red-500'}`}>
+          {value}
+        </span>
+        {unit && <span className="text-[10px] text-gray-500">{unit}</span>}
+      </div>
+      <p className="text-[10px] text-gray-600 mt-0.5">{label}</p>
+    </div>
+  );
+}
 
 export default function CasePage() {
   const params = useParams();
@@ -128,6 +189,9 @@ export default function CasePage() {
   const [treatmentImage, setTreatmentImage] = useState<string | null>(null);
   const [treatmentResult, setTreatmentResult] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // 计算预测数据
+  const predictedData = useMemo(() => calculatePredictedData(treatmentParams), [treatmentParams]);
 
   useEffect(() => {
     if (caseData) {
@@ -203,8 +267,8 @@ export default function CasePage() {
       ];
       const result = results.find(r => r.case === caseId);
       setTreatmentResult(result?.success 
-        ? `🎉 治疗成功！溶氧量恢复正常，小鱼们恢复活力了！你真棒！💪` 
-        : `😅 还需调整\n${caseData.treatmentHints.join('\n')}`);
+        ? `🎉 治疗成功！溶氧量恢复到 ${predictedData.oxygen}mg/L，小鱼们恢复活力了！你真棒！💪` 
+        : `😅 还需调整\n预测溶氧量：${predictedData.oxygen}mg/L（健康值应>5）\n\n${caseData.treatmentHints.join('\n')}`);
     } catch (error) {
       setTreatmentResult('❌ 出错了，请重试');
     } finally {
@@ -236,9 +300,9 @@ export default function CasePage() {
 
       {/* 主内容区 - 三列布局，填满剩余空间 */}
       <div className="flex-1 flex gap-3 p-3 min-h-0">
-        {/* 左列：数据 + 图片 */}
+        {/* 左列：图片 + 数据 */}
         <div className="w-1/3 flex flex-col gap-3 min-h-0">
-          {/* 生态瓶图片 - 放到最上面，给足够空间 */}
+          {/* 生态瓶图片 */}
           <Card className="flex-shrink-0">
             <CardHeader className="py-2 px-3">
               <CardTitle className="text-sm flex items-center gap-2">
@@ -334,7 +398,7 @@ export default function CasePage() {
               <Stethoscope className="w-4 h-4 text-green-500" />治疗处方 💊
             </CardTitle>
             <CardDescription className="text-xs">
-              {!showTreatment ? '和AI讨论病因后开始治疗' : '调整参数，点击治疗'}
+              {!showTreatment ? '和AI讨论病因后开始治疗' : '调整参数，看预测数据变化'}
             </CardDescription>
           </CardHeader>
           <CardContent className="flex-1 flex flex-col p-3 min-h-0 overflow-y-auto">
@@ -346,27 +410,76 @@ export default function CasePage() {
               </div>
             ) : (
               <div className="space-y-3">
+                {/* 当前数据 vs 预测数据 */}
+                <div className="grid grid-cols-2 gap-2">
+                  <DataIndicator 
+                    label="溶氧量" 
+                    value={caseData.currentData.oxygen} 
+                    unit="mg/L"
+                    healthy={caseData.currentData.oxygen >= 5}
+                  />
+                  <DataIndicator 
+                    label="溶氧量" 
+                    value={predictedData.oxygen} 
+                    unit="mg/L"
+                    healthy={predictedData.oxygen >= 5}
+                    predicted
+                    prevValue={caseData.currentData.oxygen}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <DataIndicator 
+                    label="废物浓度" 
+                    value={caseData.currentData.waste} 
+                    unit="mg/L"
+                    healthy={caseData.currentData.waste < 15}
+                  />
+                  <DataIndicator 
+                    label="废物浓度" 
+                    value={predictedData.waste} 
+                    unit="mg/L"
+                    healthy={predictedData.waste < 15}
+                    predicted
+                    prevValue={caseData.currentData.waste}
+                  />
+                </div>
+
+                {/* 提示信息 */}
+                <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                  <p className="text-[10px] text-blue-600">
+                    💡 健康标准：溶氧量 &gt; 5mg/L，废物浓度 &lt; 15mg/L
+                  </p>
+                </div>
+
                 {/* 参数调整 */}
-                {[
-                  { label: '🐟 鱼的数量', value: treatmentParams.fishCount, key: 'fishCount', min: 1, max: 8, step: 1, unit: '条' },
-                  { label: '🌿 水草密度', value: treatmentParams.plantDensity, key: 'plantDensity', min: 20, max: 100, step: 10, unit: '%' },
-                  { label: '☀️ 光照时间', value: treatmentParams.lightHours, key: 'lightHours', min: 4, max: 12, step: 1, unit: '小时' },
-                  { label: '🍞 每天投喂', value: treatmentParams.feedingAmount, key: 'feedingAmount', min: 2, max: 10, step: 1, unit: '粒' },
-                ].map((param) => (
-                  <div key={param.key} className="space-y-1">
-                    <div className="flex justify-between text-xs">
-                      <span>{param.label}</span>
-                      <span className="font-bold text-purple-600">{param.value} {param.unit}</span>
+                <div className="space-y-2 pt-2 border-t">
+                  <p className="text-xs font-semibold text-gray-500">调整参数：</p>
+                  {[
+                    { label: '🐟 鱼的数量', value: treatmentParams.fishCount, key: 'fishCount', min: 1, max: 8, step: 1, unit: '条', hint: '多耗氧' },
+                    { label: '🌿 水草密度', value: treatmentParams.plantDensity, key: 'plantDensity', min: 20, max: 100, step: 10, unit: '%', hint: '产氧+耗氧' },
+                    { label: '☀️ 光照时间', value: treatmentParams.lightHours, key: 'lightHours', min: 4, max: 12, step: 1, unit: '小时', hint: '产氧' },
+                    { label: '🍞 每天投喂', value: treatmentParams.feedingAmount, key: 'feedingAmount', min: 2, max: 10, step: 1, unit: '粒', hint: '产生废物' },
+                  ].map((param) => (
+                    <div key={param.key} className="space-y-0.5">
+                      <div className="flex justify-between text-xs">
+                        <span>{param.label}</span>
+                        <div className="flex items-center gap-1">
+                          <span className="text-[10px] text-gray-400">{param.hint}</span>
+                          <span className="font-bold text-purple-600">{param.value}{param.unit}</span>
+                        </div>
+                      </div>
+                      <Slider
+                        value={[param.value]}
+                        onValueChange={(value) => setTreatmentParams({ ...treatmentParams, [param.key]: value[0] })}
+                        min={param.min}
+                        max={param.max}
+                        step={param.step}
+                        className="h-4"
+                      />
                     </div>
-                    <Slider
-                      value={[param.value]}
-                      onValueChange={(value) => setTreatmentParams({ ...treatmentParams, [param.key]: value[0] })}
-                      min={param.min}
-                      max={param.max}
-                      step={param.step}
-                    />
-                  </div>
-                ))}
+                  ))}
+                </div>
 
                 <Button onClick={handleTreatment} disabled={isGenerating} className="w-full bg-gradient-to-r from-purple-500 to-pink-600" size="lg">
                   {isGenerating ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />生成中...</> : <><Sparkles className="w-4 h-4 mr-2" />开始治疗！</>}
