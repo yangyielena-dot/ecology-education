@@ -121,42 +121,42 @@ function generateFeedback(
   const addedSand = curr.sand > prev.sand;
   const addedStone = curr.stone > prev.stone;
 
-  // 鼓励性反馈（当添加正确的东西时）
+  // 引导学生关注数据的反馈
   if (addedWaterweed) {
-    if (curr.fish > 0 && curr.waterweed === 1) {
-      return "好主意！🌿 水草可以产生氧气，小鱼就有新鲜空气呼吸了！";
+    if (envData.oxygen < 50) {
+      return "水草来了！🌿 观察一下溶氧量有什么变化？这个数值对你想要养的小动物重要吗？🤔";
     }
-    return "不错！🌿 水草是生态瓶的好帮手！";
+    return "水草添加好了！🌿 看看溶氧量指标，它和之前有什么不同？";
   }
   
   if (addedDuckweed) {
-    return "好的！🍀 浮萍可以给小鱼遮挡阳光，让它们更舒服！";
+    return "浮萍漂浮在水面！🍀 它们会影响生态瓶里的什么呢？观察一下各项数据？";
   }
   
   if (addedSand && curr.sand === 1) {
-    return "很好！底砂铺好了，植物可以扎根生长了！🌱";
+    return "底砂铺好了！观察一下你的生态瓶，还有什么可以添加的吗？";
   }
   
   if (addedStone) {
-    return "石头是个不错的装饰！小鱼可以躲在后面休息。🪨";
+    return "石头放好了！🪨 它们在生态瓶里会起到什么作用呢？";
   }
   
   if (addedSnail) {
-    return "苹果螺来了！🐌 它可以帮忙清理藻类，保持水质干净！";
+    return "苹果螺入住啦！🐌 看看废物浓度的变化，你发现了什么？";
   }
   
   if (addedFish) {
-    // 添加鱼时的检查
-    if (curr.waterweed === 0 && curr.duckweed === 0) {
-      return `哇，小鱼来了！🐟 但是...你的瓶子里还没有植物呢，小鱼呼吸的氧气从哪里来呢？🤔`;
+    // 引导学生自己观察数据
+    if (envData.oxygen < 40) {
+      return `小鱼来了！🐟 看看左边的溶氧量指标——它的颜色是什么？这个数值说明了什么？`;
     }
-    if (curr.waterweed > 0 && curr.waterweed < curr.fish) {
-      return `又添了一条小鱼！🐟 但是你的水草够不够它们呼吸呢？`;
+    if (envData.oxygen < 50) {
+      return `小鱼游起来了！🐟 观察溶氧量的变化，你觉得这个数值够吗？`;
     }
     if (curr.fish >= 3) {
-      return `这么多小鱼！🐟🐟🐟 它们每天需要很多氧气，你的植物够吗？`;
+      return `鱼儿越来越多了！🐟🐟🐟 仔细看看溶氧量和废物浓度，你发现了什么规律？`;
     }
-    return "小鱼来了！🐟 很可爱吧？记得让它们有足够的氧气哦！";
+    return "小鱼来了！🐟 观察一下溶氧量的变化，小鱼需要什么才能呼吸呢？";
   }
 
   return null;
