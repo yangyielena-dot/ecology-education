@@ -27,7 +27,7 @@ interface PlacedItem {
   size: 'normal' | 'small';
 }
 
-interface WaterElement {
+interface ElementType {
   id: string;
   name: string;
   emoji: string;
@@ -37,8 +37,14 @@ interface WaterElement {
   noDisplay?: boolean;
 }
 
+interface ElementsConfig {
+  animals: ElementType[];
+  plants: ElementType[];
+  materials: ElementType[];
+}
+
 // 水生生态瓶元素
-const WATER_ELEMENTS: { animals: WaterElement[]; plants: WaterElement[]; materials: WaterElement[] } = {
+const WATER_ELEMENTS: ElementsConfig = {
   animals: [
     { id: 'zebra-fish', name: '斑马鱼', emoji: '🐟', max: 5, hint: '活泼好动，需要氧气', size: 'normal' },
     { id: 'apple-snail', name: '苹果螺', emoji: '🐌', max: 5, hint: '吃藻类，清洁水质', size: 'small' },
@@ -53,28 +59,43 @@ const WATER_ELEMENTS: { animals: WaterElement[]; plants: WaterElement[]; materia
   ],
 };
 
-// 计算环境指标
-function calculateEnvironment(elements: Record<string, number>) {
+// 陆生生态瓶元素
+const LAND_ELEMENTS: ElementsConfig = {
+  animals: [
+    { id: 'earthworm', name: '蚯蚓', emoji: '🪱', max: 5, hint: '松土高手', size: 'small' },
+    { id: 'ant', name: '蚂蚁', emoji: '🐜', max: 10, hint: '清理残渣', size: 'small' },
+    { id: 'pillbug', name: '鼠妇', emoji: '🪲', max: 5, hint: '分解枯叶', size: 'small' },
+    { id: 'beetle', name: '小甲虫', emoji: '🪲', max: 5, hint: '捕食害虫', size: 'small' },
+  ],
+  plants: [
+    { id: 'moss', name: '苔藓', emoji: '🌱', max: 10, hint: '保持湿度', size: 'normal' },
+  ],
+  materials: [
+    { id: 'soil', name: '土壤', emoji: '⬜', max: 1, hint: '铺满底部', size: 'normal', noDisplay: true },
+    { id: 'pebble', name: '石子', emoji: '🪨', max: 10, hint: '排水装饰', size: 'small' },
+    { id: 'deadwood', name: '枯木', emoji: '🪵', max: 3, hint: '昆虫栖息', size: 'normal' },
+  ],
+};
+
+// 计算环境指标 - 水生
+function calculateWaterEnvironment(elements: Record<string, number>) {
   const fishCount = elements['zebra-fish'] || 0;
   const snailCount = elements['apple-snail'] || 0;
   const waterweedCount = elements['waterweed'] || 0;
   const duckweedCount = elements['duckweed'] || 0;
   
-  // 溶氧量计算
   let oxygen = 50;
-  oxygen += waterweedCount * 4; // 水草产氧
-  oxygen += duckweedCount * 1;  // 浮萍产氧
-  oxygen -= fishCount * 6;      // 鱼耗氧
-  oxygen -= snailCount * 1;     // 螺耗氧
+  oxygen += waterweedCount * 4;
+  oxygen += duckweedCount * 1;
+  oxygen -= fishCount * 6;
+  oxygen -= snailCount * 1;
   
-  // 废物浓度
   let waste = 20;
-  waste += fishCount * 8;       // 鱼产生废物
-  waste += snailCount * 2;      // 螺产生废物
-  waste -= snailCount * 3;      // 螺吃藻类
-  waste -= waterweedCount * 2;  // 水草吸收
+  waste += fishCount * 8;
+  waste += snailCount * 2;
+  waste -= snailCount * 3;
+  waste -= waterweedCount * 2;
   
-  // 稳定性
   const idealOxygen = 60;
   const stability = Math.max(0, 100 - Math.abs(oxygen - idealOxygen) - Math.abs(waste - 30));
   
@@ -82,18 +103,43 @@ function calculateEnvironment(elements: Record<string, number>) {
     oxygen: Math.max(0, Math.min(100, Math.round(oxygen))),
     waste: Math.max(0, Math.min(100, Math.round(waste))),
     stability: Math.max(0, Math.min(100, Math.round(stability))),
-    fishCount,
-    snailCount,
-    waterweedCount,
-    duckweedCount,
   };
 }
 
-// 生成AI反馈消息
-function generateFeedback(
+// 计算环境指标 - 陆生
+function calculateLandEnvironment(elements: Record<string, number>) {
+  const earthwormCount = elements['earthworm'] || 0;
+  const antCount = elements['ant'] || 0;
+  const pillbugCount = elements['pillbug'] || 0;
+  const beetleCount = elements['beetle'] || 0;
+  const mossCount = elements['moss'] || 0;
+  
+  // 湿度
+  let humidity = 50;
+  humidity += mossCount * 3;
+  humidity -= antCount * 1;
+  
+  // 有机物
+  let organic = 30;
+  organic += earthwormCount * 5;
+  organic += pillbugCount * 3;
+  organic -= mossCount * 2;
+  
+  const totalAnimals = earthwormCount + antCount + pillbugCount + beetleCount;
+  const stability = Math.max(0, 100 - Math.abs(humidity - 60) - Math.abs(organic - 40) - Math.max(0, totalAnimals - 10) * 3);
+  
+  return {
+    oxygen: Math.max(0, Math.min(100, Math.round(humidity))),  // 复用显示为湿度
+    waste: Math.max(0, Math.min(100, Math.round(organic))),    // 复用显示为有机物
+    stability: Math.max(0, Math.min(100, Math.round(stability))),
+  };
+}
+
+// 生成AI反馈消息 - 水生
+function generateWaterFeedback(
   prevElements: Record<string, number>,
   newElements: Record<string, number>,
-  envData: ReturnType<typeof calculateEnvironment>
+  envData: ReturnType<typeof calculateWaterEnvironment>
 ): string | null {
   const prev = {
     fish: prevElements['zebra-fish'] || 0,
@@ -113,7 +159,6 @@ function generateFeedback(
     stone: newElements['stone'] || 0,
   };
 
-  // 检测变化
   const addedFish = curr.fish > prev.fish;
   const addedSnail = curr.snail > prev.snail;
   const addedWaterweed = curr.waterweed > prev.waterweed;
@@ -121,7 +166,6 @@ function generateFeedback(
   const addedSand = curr.sand > prev.sand;
   const addedStone = curr.stone > prev.stone;
 
-  // 引导学生关注数据的反馈
   if (addedWaterweed) {
     if (envData.oxygen < 50) {
       return "水草来了！🌿 观察一下溶氧量有什么变化？这个数值对你想要养的小动物重要吗？🤔";
@@ -146,7 +190,6 @@ function generateFeedback(
   }
   
   if (addedFish) {
-    // 引导学生自己观察数据
     if (envData.oxygen < 40) {
       return `小鱼来了！🐟 看看左边的溶氧量指标——它的颜色是什么？这个数值说明了什么？`;
     }
@@ -162,11 +205,84 @@ function generateFeedback(
   return null;
 }
 
+// 生成AI反馈消息 - 陆生
+function generateLandFeedback(
+  prevElements: Record<string, number>,
+  newElements: Record<string, number>,
+  envData: ReturnType<typeof calculateLandEnvironment>
+): string | null {
+  const prev = {
+    earthworm: prevElements['earthworm'] || 0,
+    ant: prevElements['ant'] || 0,
+    pillbug: prevElements['pillbug'] || 0,
+    beetle: prevElements['beetle'] || 0,
+    moss: prevElements['moss'] || 0,
+    soil: prevElements['soil'] || 0,
+    pebble: prevElements['pebble'] || 0,
+    deadwood: prevElements['deadwood'] || 0,
+  };
+  
+  const curr = {
+    earthworm: newElements['earthworm'] || 0,
+    ant: newElements['ant'] || 0,
+    pillbug: newElements['pillbug'] || 0,
+    beetle: newElements['beetle'] || 0,
+    moss: newElements['moss'] || 0,
+    soil: newElements['soil'] || 0,
+    pebble: newElements['pebble'] || 0,
+    deadwood: newElements['deadwood'] || 0,
+  };
+
+  const addedEarthworm = curr.earthworm > prev.earthworm;
+  const addedAnt = curr.ant > prev.ant;
+  const addedPillbug = curr.pillbug > prev.pillbug;
+  const addedBeetle = curr.beetle > prev.beetle;
+  const addedMoss = curr.moss > prev.moss;
+  const addedSoil = curr.soil > prev.soil;
+  const addedPebble = curr.pebble > prev.pebble;
+  const addedDeadwood = curr.deadwood > prev.deadwood;
+
+  if (addedMoss) {
+    return "苔藓来了！🌱 观察一下湿度指标的变化，你发现了什么？";
+  }
+  
+  if (addedSoil && curr.soil === 1) {
+    return "土壤铺好了！这是小生物们的家。还要添加什么吗？";
+  }
+  
+  if (addedPebble) {
+    return "石子放好了！🪨 它们可以帮助排水，观察一下各项数据？";
+  }
+  
+  if (addedDeadwood) {
+    return "枯木放好了！🪵 小昆虫们可以在上面休息。看看数据有什么变化？";
+  }
+  
+  if (addedEarthworm) {
+    return "蚯蚓入住啦！🪱 它们会帮忙松土。观察一下有机物的变化？";
+  }
+  
+  if (addedAnt) {
+    return "蚂蚁来了！🐜 它们很勤劳。看看各项指标的变化？";
+  }
+  
+  if (addedPillbug) {
+    return "鼠妇入住啦！🪲 它们喜欢潮湿的环境。观察一下湿度指标？";
+  }
+  
+  if (addedBeetle) {
+    return "小甲虫来了！🪲 它们是小小捕食者。看看数据有什么变化？";
+  }
+
+  return null;
+}
+
 export default function BottlePage() {
-  const [elements, setElements] = useState<Record<string, number>>({ hasWater: 1, sand: 0 });
-  const [prevElements, setPrevElements] = useState<Record<string, number>>({ hasWater: 1, sand: 0 });
+  const [bottleType, setBottleType] = useState<'water' | 'land' | null>(null);
+  const [elements, setElements] = useState<Record<string, number>>({});
+  const [prevElements, setPrevElements] = useState<Record<string, number>>({});
   const [placedItems, setPlacedItems] = useState<PlacedItem[]>([]);
-  const [lightHours, setLightHours] = useState(8);
+  const [lightHours, setLightHours] = useState(0);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -174,17 +290,27 @@ export default function BottlePage() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottleRef = useRef<HTMLDivElement>(null);
 
-  const envData = calculateEnvironment(elements);
+  const currentElements = bottleType === 'water' ? WATER_ELEMENTS : LAND_ELEMENTS;
+  const envData = bottleType === 'water' 
+    ? calculateWaterEnvironment(elements) 
+    : calculateLandEnvironment(elements);
 
   // 初始化消息
   useEffect(() => {
-    const initialMessage = `你好！我是生态瓶设计助手苗苗 🌱
+    if (bottleType) {
+      const typeName = bottleType === 'water' ? '水生' : '陆生';
+      const initialMessage = `你好！我是生态瓶设计助手苗苗 🌱
 
-这是一个空的水生生态瓶，让我们一起来设计它吧！
+这是一个空的${typeName}生态瓶，让我们一起来设计它吧！
 
 你可以从右边选择生物和材料添加到生态瓶中。试试看！`;
-    setMessages([{ role: 'assistant', content: initialMessage }]);
-  }, []);
+      setMessages([{ role: 'assistant', content: initialMessage }]);
+      setElements({});
+      setPrevElements({});
+      setPlacedItems([]);
+      setLightHours(0);
+    }
+  }, [bottleType]);
 
   // 自动滚动到底部
   useEffect(() => {
@@ -195,20 +321,23 @@ export default function BottlePage() {
 
   // 当元素变化时生成反馈
   useEffect(() => {
-    // 跳过初始化
+    if (!bottleType) return;
+    
     if (Object.keys(prevElements).length === 0 || 
         JSON.stringify(prevElements) === JSON.stringify(elements)) {
       return;
     }
     
-    const feedback = generateFeedback(prevElements, elements, envData);
+    const feedback = bottleType === 'water'
+      ? generateWaterFeedback(prevElements, elements, envData)
+      : generateLandFeedback(prevElements, elements, envData);
+      
     if (feedback) {
       setMessages(prev => [...prev, { role: 'assistant', content: feedback }]);
     }
     
-    // 更新 prevElements
     setPrevElements({ ...elements });
-  }, [elements]);
+  }, [elements, bottleType]);
 
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return;
@@ -224,7 +353,7 @@ export default function BottlePage() {
         body: JSON.stringify({ 
           message: userMessage,
           context: 'bottle',
-          bottleType: 'water',
+          bottleType: bottleType,
           selectedElements: elements,
           envData: envData,
           conversationHistory: messages 
@@ -257,10 +386,8 @@ export default function BottlePage() {
       return { ...prev, [elementId]: newValue };
     });
     
-    // 如果是底砂等不需要显示的元素，不添加到生态瓶中
     if (noDisplay) return;
     
-    // 添加时在生态瓶中放置
     if (delta > 0) {
       const bottle = bottleRef.current;
       if (bottle) {
@@ -276,7 +403,6 @@ export default function BottlePage() {
         setPlacedItems(prev => [...prev, newItem]);
       }
     } else {
-      // 移除最后一个
       setPlacedItems(prev => {
         const idx = prev.map(item => item.elementId).lastIndexOf(elementId);
         if (idx !== -1) {
@@ -317,19 +443,86 @@ export default function BottlePage() {
     setDraggingItem(null);
   };
 
+  // 选择类型界面
+  if (!bottleType) {
+    return (
+      <div className="h-screen bg-gradient-to-b from-cyan-50 to-blue-100 dark:from-cyan-950 dark:to-blue-900 flex flex-col">
+        <div className="flex items-center justify-between px-4 py-2 border-b bg-white/50 dark:bg-gray-900/50 flex-shrink-0">
+          <Link href="/">
+            <Button variant="ghost" size="sm" className="gap-1">
+              <ArrowLeft className="w-4 h-4" />
+              返回
+            </Button>
+          </Link>
+          <div className="flex items-center gap-2">
+            <FlaskConical className="w-5 h-5 text-blue-600" />
+            <span className="font-bold text-blue-700">设计生态瓶</span>
+          </div>
+          <div className="w-16" />
+        </div>
+
+        <div className="flex-1 flex items-center justify-center p-6">
+          <div className="max-w-2xl w-full">
+            <h2 className="text-2xl font-bold text-center mb-2 text-blue-700">选择生态瓶类型</h2>
+            <p className="text-center text-gray-600 mb-8">你想设计哪种生态瓶呢？</p>
+            
+            <div className="grid grid-cols-2 gap-6">
+              {/* 水生生态瓶 */}
+              <Card 
+                className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-blue-400"
+                onClick={() => setBottleType('water')}
+              >
+                <CardContent className="p-6 text-center">
+                  <div className="text-6xl mb-4">🐟</div>
+                  <h3 className="text-xl font-bold text-blue-700 mb-2">水生生态瓶</h3>
+                  <p className="text-sm text-gray-600">
+                    小鱼、水草、螺...<br />
+                    打造水下小世界
+                  </p>
+                  <div className="mt-4 flex justify-center gap-2 text-2xl">
+                    🐟 🐌 🌿 🍀 🪨
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* 陆生生态瓶 */}
+              <Card 
+                className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-green-400"
+                onClick={() => setBottleType('land')}
+              >
+                <CardContent className="p-6 text-center">
+                  <div className="text-6xl mb-4">🌱</div>
+                  <h3 className="text-xl font-bold text-green-700 mb-2">陆生生态瓶</h3>
+                  <p className="text-sm text-gray-600">
+                    蚂蚁、蚯蚓、苔藓...<br />
+                    创造陆地小生态
+                  </p>
+                  <div className="mt-4 flex justify-center gap-2 text-2xl">
+                    🐜 🪱 🪲 🌱 🪵
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 主设计界面
   return (
     <div className="h-screen overflow-hidden bg-gradient-to-b from-cyan-50 to-blue-100 dark:from-cyan-950 dark:to-blue-900 flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2 border-b bg-white/50 dark:bg-gray-900/50 flex-shrink-0">
-        <Link href="/">
-          <Button variant="ghost" size="sm" className="gap-1">
-            <ArrowLeft className="w-4 h-4" />
-            返回
-          </Button>
-        </Link>
+        <Button variant="ghost" size="sm" className="gap-1" onClick={() => setBottleType(null)}>
+          <ArrowLeft className="w-4 h-4" />
+          重选
+        </Button>
         <div className="flex items-center gap-2">
           <FlaskConical className="w-5 h-5 text-blue-600" />
-          <span className="font-bold text-blue-700">设计水生生态瓶</span>
+          <span className="font-bold text-blue-700">
+            设计{bottleType === 'water' ? '水生' : '陆生'}生态瓶
+          </span>
         </div>
         <div className="w-16" />
       </div>
@@ -343,11 +536,17 @@ export default function BottlePage() {
             <CardContent className="flex-1 p-3 min-h-0">
               <div 
                 ref={bottleRef}
-                className="relative w-full h-full rounded-xl overflow-hidden border-4 border-cyan-200 dark:border-cyan-700"
+                className={`relative w-full h-full rounded-xl overflow-hidden border-4 ${
+                  bottleType === 'water' ? 'border-cyan-200 dark:border-cyan-700' : 'border-green-200 dark:border-green-700'
+                }`}
                 style={{
-                  background: elements.sand > 0 
-                    ? 'linear-gradient(to bottom, #e0f7fa 0%, #b2ebf2 30%, #80deea 100%)'
-                    : 'linear-gradient(to bottom, #e0f7fa 0%, #b2ebf2 30%, #80deea 100%)',
+                  background: bottleType === 'water'
+                    ? elements.sand > 0 
+                      ? 'linear-gradient(to bottom, #e0f7fa 0%, #b2ebf2 30%, #80deea 100%)'
+                      : 'linear-gradient(to bottom, #e0f7fa 0%, #b2ebf2 30%, #80deea 100%)'
+                    : elements.soil > 0
+                      ? 'linear-gradient(to bottom, #dcedc8 0%, #c5e1a5 50%, #8bc34a 100%)'
+                      : 'linear-gradient(to bottom, #f5f5f5 0%, #e0e0e0 50%, #bdbdbd 100%)',
                 }}
                 onMouseMove={(e) => draggingItem && handleDrag(e, draggingItem)}
                 onMouseUp={handleDragEnd}
@@ -355,17 +554,25 @@ export default function BottlePage() {
                 onTouchMove={(e) => draggingItem && handleDrag(e, draggingItem)}
                 onTouchEnd={handleDragEnd}
               >
-                {/* 水 - 70%高度 */}
-                <div 
-                  className="absolute left-0 right-0 bottom-0 bg-gradient-to-t from-blue-300/60 to-cyan-200/40"
-                  style={{ height: '70%' }}
-                />
+                {/* 水生 - 水层 */}
+                {bottleType === 'water' && (
+                  <div 
+                    className="absolute left-0 right-0 bottom-0 bg-gradient-to-t from-blue-300/60 to-cyan-200/40"
+                    style={{ height: '70%' }}
+                  />
+                )}
                 
-                {/* 底砂 */}
-                {elements.sand > 0 && (
+                {/* 底砂/土壤 */}
+                {(bottleType === 'water' && elements.sand > 0) && (
                   <div 
                     className="absolute left-0 right-0 bottom-0 bg-gradient-to-t from-amber-300 to-amber-200"
                     style={{ height: '15%' }}
+                  />
+                )}
+                {(bottleType === 'land' && elements.soil > 0) && (
+                  <div 
+                    className="absolute left-0 right-0 bottom-0 bg-gradient-to-t from-amber-700 to-amber-600"
+                    style={{ height: '30%' }}
                   />
                 )}
                 
@@ -395,24 +602,49 @@ export default function BottlePage() {
           <Card className="flex-shrink-0">
             <CardContent className="p-3">
               <div className="grid grid-cols-3 gap-3">
-                <div className="text-center">
-                  <div className="flex items-center justify-center gap-1 mb-1">
-                    <Wind className="w-4 h-4 text-blue-500" />
-                    <span className="text-xs text-gray-500">溶氧量</span>
-                  </div>
-                  <p className={`text-2xl font-bold ${envData.oxygen >= 50 ? 'text-green-600' : 'text-red-500'}`}>
-                    {envData.oxygen}%
-                  </p>
-                </div>
-                <div className="text-center">
-                  <div className="flex items-center justify-center gap-1 mb-1">
-                    <Droplets className="w-4 h-4 text-red-500" />
-                    <span className="text-xs text-gray-500">废物</span>
-                  </div>
-                  <p className={`text-2xl font-bold ${envData.waste < 40 ? 'text-green-600' : 'text-red-500'}`}>
-                    {envData.waste}%
-                  </p>
-                </div>
+                {bottleType === 'water' ? (
+                  <>
+                    <div className="text-center">
+                      <div className="flex items-center justify-center gap-1 mb-1">
+                        <Wind className="w-4 h-4 text-blue-500" />
+                        <span className="text-xs text-gray-500">溶氧量</span>
+                      </div>
+                      <p className={`text-2xl font-bold ${envData.oxygen >= 50 ? 'text-green-600' : 'text-red-500'}`}>
+                        {envData.oxygen}%
+                      </p>
+                    </div>
+                    <div className="text-center">
+                      <div className="flex items-center justify-center gap-1 mb-1">
+                        <Droplets className="w-4 h-4 text-red-500" />
+                        <span className="text-xs text-gray-500">废物</span>
+                      </div>
+                      <p className={`text-2xl font-bold ${envData.waste < 40 ? 'text-green-600' : 'text-red-500'}`}>
+                        {envData.waste}%
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-center">
+                      <div className="flex items-center justify-center gap-1 mb-1">
+                        <Droplets className="w-4 h-4 text-blue-500" />
+                        <span className="text-xs text-gray-500">湿度</span>
+                      </div>
+                      <p className={`text-2xl font-bold ${envData.oxygen >= 50 ? 'text-green-600' : 'text-yellow-500'}`}>
+                        {envData.oxygen}%
+                      </p>
+                    </div>
+                    <div className="text-center">
+                      <div className="flex items-center justify-center gap-1 mb-1">
+                        <span className="text-xs text-gray-500">🍂</span>
+                        <span className="text-xs text-gray-500">有机物</span>
+                      </div>
+                      <p className={`text-2xl font-bold ${envData.waste < 50 ? 'text-green-600' : 'text-yellow-500'}`}>
+                        {envData.waste}%
+                      </p>
+                    </div>
+                  </>
+                )}
                 <div className="text-center">
                   <div className="flex items-center justify-center gap-1 mb-1">
                     <Sparkles className="w-4 h-4 text-purple-500" />
@@ -439,7 +671,7 @@ export default function BottlePage() {
                   <Slider
                     value={[lightHours]}
                     onValueChange={(v) => setLightHours(v[0])}
-                    min={4}
+                    min={0}
                     max={14}
                     step={1}
                   />
@@ -459,7 +691,7 @@ export default function BottlePage() {
             <CardContent className="p-3">
               <div className="grid grid-cols-2 gap-3">
                 {/* 动物 */}
-                {WATER_ELEMENTS.animals.map(element => (
+                {currentElements.animals.map(element => (
                   <div key={element.id} className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded-lg border">
                     <div className="flex items-center gap-2">
                       <span className={`text-2xl ${element.size === 'small' ? 'scale-75' : ''}`}>{element.emoji}</span>
@@ -481,7 +713,7 @@ export default function BottlePage() {
                 ))}
                 
                 {/* 植物 */}
-                {WATER_ELEMENTS.plants.map(element => (
+                {currentElements.plants.map(element => (
                   <div key={element.id} className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded-lg border">
                     <div className="flex items-center gap-2">
                       <span className="text-2xl">{element.emoji}</span>
@@ -503,7 +735,7 @@ export default function BottlePage() {
                 ))}
                 
                 {/* 材料 */}
-                {WATER_ELEMENTS.materials.map(element => (
+                {currentElements.materials.map(element => (
                   <div key={element.id} className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded-lg border">
                     <div className="flex items-center gap-2">
                       <span className="text-2xl">{element.emoji}</span>
