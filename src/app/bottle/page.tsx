@@ -24,7 +24,7 @@ interface PlacedItem {
   emoji: string;
   x: number;
   y: number;
-  size: 'normal' | 'small';
+  size: 'normal' | 'small' | 'large';
 }
 
 interface ElementType {
@@ -33,7 +33,7 @@ interface ElementType {
   emoji: string;
   max: number;
   hint: string;
-  size?: 'normal' | 'small';
+  size?: 'normal' | 'small' | 'large';
   noDisplay?: boolean;
 }
 
@@ -72,24 +72,27 @@ const LAND_ELEMENTS: ElementsConfig = {
   ],
   materials: [
     { id: 'soil', name: '土壤', emoji: '⬜', max: 1, hint: '铺满底部', size: 'normal', noDisplay: true },
-    { id: 'pebble', name: '石子', emoji: '🪨', max: 10, hint: '排水装饰', size: 'small' },
-    { id: 'deadwood', name: '枯木', emoji: '🪵', max: 3, hint: '昆虫栖息', size: 'normal' },
+    { id: 'pebble', name: '石子', emoji: '🪨', max: 10, hint: '排水装饰', size: 'large' },
+    { id: 'deadwood', name: '枯木', emoji: '🪵', max: 3, hint: '昆虫栖息', size: 'large' },
   ],
 };
 
-// 计算环境指标 - 水生
-function calculateWaterEnvironment(elements: Record<string, number>) {
+// 计算环境指标 - 水生（加入光照影响）
+function calculateWaterEnvironment(elements: Record<string, number>, lightHours: number) {
   const fishCount = elements['zebra-fish'] || 0;
   const snailCount = elements['apple-snail'] || 0;
   const waterweedCount = elements['waterweed'] || 0;
   const duckweedCount = elements['duckweed'] || 0;
   
+  // 溶氧量计算 - 光照影响植物产氧
   let oxygen = 50;
-  oxygen += waterweedCount * 4;
-  oxygen += duckweedCount * 1;
+  const lightBonus = Math.min(lightHours, 10) * 2; // 光照越多，植物产氧越多
+  oxygen += waterweedCount * (4 + lightBonus / 10);
+  oxygen += duckweedCount * (1 + lightBonus / 20);
   oxygen -= fishCount * 6;
   oxygen -= snailCount * 1;
   
+  // 废物浓度
   let waste = 20;
   waste += fishCount * 8;
   waste += snailCount * 2;
@@ -106,18 +109,19 @@ function calculateWaterEnvironment(elements: Record<string, number>) {
   };
 }
 
-// 计算环境指标 - 陆生
-function calculateLandEnvironment(elements: Record<string, number>) {
+// 计算环境指标 - 陆生（加入光照影响）
+function calculateLandEnvironment(elements: Record<string, number>, lightHours: number) {
   const earthwormCount = elements['earthworm'] || 0;
   const antCount = elements['ant'] || 0;
   const pillbugCount = elements['pillbug'] || 0;
   const beetleCount = elements['beetle'] || 0;
   const mossCount = elements['moss'] || 0;
   
-  // 湿度
+  // 湿度 - 光照会降低湿度
   let humidity = 50;
   humidity += mossCount * 3;
   humidity -= antCount * 1;
+  humidity -= Math.max(0, lightHours - 8) * 2; // 光照过长会降低湿度
   
   // 有机物
   let organic = 30;
@@ -129,171 +133,87 @@ function calculateLandEnvironment(elements: Record<string, number>) {
   const stability = Math.max(0, 100 - Math.abs(humidity - 60) - Math.abs(organic - 40) - Math.max(0, totalAnimals - 10) * 3);
   
   return {
-    oxygen: Math.max(0, Math.min(100, Math.round(humidity))),  // 复用显示为湿度
-    waste: Math.max(0, Math.min(100, Math.round(organic))),    // 复用显示为有机物
+    oxygen: Math.max(0, Math.min(100, Math.round(humidity))),
+    waste: Math.max(0, Math.min(100, Math.round(organic))),
     stability: Math.max(0, Math.min(100, Math.round(stability))),
   };
 }
 
 // 生成AI反馈消息 - 水生
 function generateWaterFeedback(
-  prevElements: Record<string, number>,
-  newElements: Record<string, number>,
-  envData: ReturnType<typeof calculateWaterEnvironment>
+  elementId: string,
+  delta: number,
+  elements: Record<string, number>,
+  envData: { oxygen: number; waste: number; stability: number }
 ): string | null {
-  const prev = {
-    fish: prevElements['zebra-fish'] || 0,
-    snail: prevElements['apple-snail'] || 0,
-    waterweed: prevElements['waterweed'] || 0,
-    duckweed: prevElements['duckweed'] || 0,
-    sand: prevElements['sand'] || 0,
-    stone: prevElements['stone'] || 0,
+  if (delta <= 0) return null; // 只在添加时反馈
+  
+  const feedbacks: Record<string, () => string> = {
+    'zebra-fish': () => {
+      const count = elements['zebra-fish'] || 0;
+      if (envData.oxygen < 40) {
+        return `小鱼来了！🐟 看看左边的溶氧量指标——它的颜色是什么？这个数值说明了什么？`;
+      }
+      if (count >= 3) {
+        return `鱼儿越来越多了！🐟🐟🐟 仔细看看溶氧量和废物浓度，你发现了什么规律？`;
+      }
+      return "小鱼来了！🐟 观察一下溶氧量的变化，小鱼需要什么才能呼吸呢？";
+    },
+    'apple-snail': () => "苹果螺入住啦！🐌 看看废物浓度的变化，你发现了什么？",
+    'waterweed': () => {
+      if (envData.oxygen < 50) {
+        return "水草来了！🌿 观察一下溶氧量有什么变化？这个数值对你想要养的小动物重要吗？🤔";
+      }
+      return "水草添加好了！🌿 看看溶氧量指标，它和之前有什么不同？";
+    },
+    'duckweed': () => "浮萍漂浮在水面！🍀 它们会影响生态瓶里的什么呢？观察一下各项数据？",
+    'sand': () => "底砂铺好了！观察一下你的生态瓶，还有什么可以添加的吗？",
+    'stone': () => "石头放好了！🪨 它们在生态瓶里会起到什么作用呢？",
   };
   
-  const curr = {
-    fish: newElements['zebra-fish'] || 0,
-    snail: newElements['apple-snail'] || 0,
-    waterweed: newElements['waterweed'] || 0,
-    duckweed: newElements['duckweed'] || 0,
-    sand: newElements['sand'] || 0,
-    stone: newElements['stone'] || 0,
-  };
-
-  const addedFish = curr.fish > prev.fish;
-  const addedSnail = curr.snail > prev.snail;
-  const addedWaterweed = curr.waterweed > prev.waterweed;
-  const addedDuckweed = curr.duckweed > prev.duckweed;
-  const addedSand = curr.sand > prev.sand;
-  const addedStone = curr.stone > prev.stone;
-
-  if (addedWaterweed) {
-    if (envData.oxygen < 50) {
-      return "水草来了！🌿 观察一下溶氧量有什么变化？这个数值对你想要养的小动物重要吗？🤔";
-    }
-    return "水草添加好了！🌿 看看溶氧量指标，它和之前有什么不同？";
-  }
-  
-  if (addedDuckweed) {
-    return "浮萍漂浮在水面！🍀 它们会影响生态瓶里的什么呢？观察一下各项数据？";
-  }
-  
-  if (addedSand && curr.sand === 1) {
-    return "底砂铺好了！观察一下你的生态瓶，还有什么可以添加的吗？";
-  }
-  
-  if (addedStone) {
-    return "石头放好了！🪨 它们在生态瓶里会起到什么作用呢？";
-  }
-  
-  if (addedSnail) {
-    return "苹果螺入住啦！🐌 看看废物浓度的变化，你发现了什么？";
-  }
-  
-  if (addedFish) {
-    if (envData.oxygen < 40) {
-      return `小鱼来了！🐟 看看左边的溶氧量指标——它的颜色是什么？这个数值说明了什么？`;
-    }
-    if (envData.oxygen < 50) {
-      return `小鱼游起来了！🐟 观察溶氧量的变化，你觉得这个数值够吗？`;
-    }
-    if (curr.fish >= 3) {
-      return `鱼儿越来越多了！🐟🐟🐟 仔细看看溶氧量和废物浓度，你发现了什么规律？`;
-    }
-    return "小鱼来了！🐟 观察一下溶氧量的变化，小鱼需要什么才能呼吸呢？";
-  }
-
-  return null;
+  return feedbacks[elementId]?.() || null;
 }
 
 // 生成AI反馈消息 - 陆生
 function generateLandFeedback(
-  prevElements: Record<string, number>,
-  newElements: Record<string, number>,
-  envData: ReturnType<typeof calculateLandEnvironment>
+  elementId: string,
+  delta: number,
+  elements: Record<string, number>,
+  envData: { oxygen: number; waste: number; stability: number }
 ): string | null {
-  const prev = {
-    earthworm: prevElements['earthworm'] || 0,
-    ant: prevElements['ant'] || 0,
-    pillbug: prevElements['pillbug'] || 0,
-    beetle: prevElements['beetle'] || 0,
-    moss: prevElements['moss'] || 0,
-    soil: prevElements['soil'] || 0,
-    pebble: prevElements['pebble'] || 0,
-    deadwood: prevElements['deadwood'] || 0,
+  if (delta <= 0) return null;
+  
+  const feedbacks: Record<string, () => string> = {
+    'earthworm': () => "蚯蚓入住啦！🪱 它们会帮忙松土。观察一下有机物的变化？",
+    'ant': () => "蚂蚁来了！🐜 它们很勤劳。看看各项指标的变化？",
+    'pillbug': () => "鼠妇入住啦！🪲 它们喜欢潮湿的环境。观察一下湿度指标？",
+    'beetle': () => "小甲虫来了！🪲 它们是小小捕食者。看看数据有什么变化？",
+    'moss': () => "苔藓来了！🌱 观察一下湿度指标的变化，你发现了什么？",
+    'soil': () => "土壤铺好了！这是小生物们的家。还要添加什么吗？",
+    'pebble': () => "石子放好了！🪨 小昆虫们可以躲在下面休息。观察一下数据？",
+    'deadwood': () => "枯木放好了！🪵 它是小昆虫们的遮蔽所。看看数据有什么变化？",
   };
   
-  const curr = {
-    earthworm: newElements['earthworm'] || 0,
-    ant: newElements['ant'] || 0,
-    pillbug: newElements['pillbug'] || 0,
-    beetle: newElements['beetle'] || 0,
-    moss: newElements['moss'] || 0,
-    soil: newElements['soil'] || 0,
-    pebble: newElements['pebble'] || 0,
-    deadwood: newElements['deadwood'] || 0,
-  };
-
-  const addedEarthworm = curr.earthworm > prev.earthworm;
-  const addedAnt = curr.ant > prev.ant;
-  const addedPillbug = curr.pillbug > prev.pillbug;
-  const addedBeetle = curr.beetle > prev.beetle;
-  const addedMoss = curr.moss > prev.moss;
-  const addedSoil = curr.soil > prev.soil;
-  const addedPebble = curr.pebble > prev.pebble;
-  const addedDeadwood = curr.deadwood > prev.deadwood;
-
-  if (addedMoss) {
-    return "苔藓来了！🌱 观察一下湿度指标的变化，你发现了什么？";
-  }
-  
-  if (addedSoil && curr.soil === 1) {
-    return "土壤铺好了！这是小生物们的家。还要添加什么吗？";
-  }
-  
-  if (addedPebble) {
-    return "石子放好了！🪨 它们可以帮助排水，观察一下各项数据？";
-  }
-  
-  if (addedDeadwood) {
-    return "枯木放好了！🪵 小昆虫们可以在上面休息。看看数据有什么变化？";
-  }
-  
-  if (addedEarthworm) {
-    return "蚯蚓入住啦！🪱 它们会帮忙松土。观察一下有机物的变化？";
-  }
-  
-  if (addedAnt) {
-    return "蚂蚁来了！🐜 它们很勤劳。看看各项指标的变化？";
-  }
-  
-  if (addedPillbug) {
-    return "鼠妇入住啦！🪲 它们喜欢潮湿的环境。观察一下湿度指标？";
-  }
-  
-  if (addedBeetle) {
-    return "小甲虫来了！🪲 它们是小小捕食者。看看数据有什么变化？";
-  }
-
-  return null;
+  return feedbacks[elementId]?.() || null;
 }
 
 export default function BottlePage() {
   const [bottleType, setBottleType] = useState<'water' | 'land' | null>(null);
   const [elements, setElements] = useState<Record<string, number>>({});
-  const [prevElements, setPrevElements] = useState<Record<string, number>>({});
   const [placedItems, setPlacedItems] = useState<PlacedItem[]>([]);
-  const [lightHours, setLightHours] = useState(0);
+  const [lightHours, setLightHours] = useState(8);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [draggingItem, setDraggingItem] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const bottleRef = useRef<HTMLDivElement>(null);
 
   const currentElements = bottleType === 'water' ? WATER_ELEMENTS : LAND_ELEMENTS;
   const envData = bottleType === 'water' 
-    ? calculateWaterEnvironment(elements) 
-    : calculateLandEnvironment(elements);
+    ? calculateWaterEnvironment(elements, lightHours) 
+    : calculateLandEnvironment(elements, lightHours);
 
   // 初始化消息
   useEffect(() => {
@@ -306,38 +226,15 @@ export default function BottlePage() {
 你可以从右边选择生物和材料添加到生态瓶中。试试看！`;
       setMessages([{ role: 'assistant', content: initialMessage }]);
       setElements({});
-      setPrevElements({});
       setPlacedItems([]);
-      setLightHours(0);
+      setLightHours(8);
     }
   }, [bottleType]);
 
   // 自动滚动到底部
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
-
-  // 当元素变化时生成反馈
-  useEffect(() => {
-    if (!bottleType) return;
-    
-    if (Object.keys(prevElements).length === 0 || 
-        JSON.stringify(prevElements) === JSON.stringify(elements)) {
-      return;
-    }
-    
-    const feedback = bottleType === 'water'
-      ? generateWaterFeedback(prevElements, elements, envData)
-      : generateLandFeedback(prevElements, elements, envData);
-      
-    if (feedback) {
-      setMessages(prev => [...prev, { role: 'assistant', content: feedback }]);
-    }
-    
-    setPrevElements({ ...elements });
-  }, [elements, bottleType]);
 
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return;
@@ -356,6 +253,7 @@ export default function BottlePage() {
           bottleType: bottleType,
           selectedElements: elements,
           envData: envData,
+          lightHours: lightHours,
           conversationHistory: messages 
         }),
       });
@@ -379,30 +277,53 @@ export default function BottlePage() {
     }
   };
 
-  const handleElementChange = (elementId: string, delta: number, emoji: string, size: 'normal' | 'small' = 'normal', noDisplay: boolean = false) => {
-    setElements(prev => {
-      const current = prev[elementId] || 0;
-      const newValue = Math.max(0, current + delta);
-      return { ...prev, [elementId]: newValue };
-    });
+  const handleElementChange = (elementId: string, delta: number, emoji: string, size: 'normal' | 'small' | 'large' = 'normal', noDisplay: boolean = false) => {
+    const currentCount = elements[elementId] || 0;
+    const newCount = Math.max(0, currentCount + delta);
     
+    // 更新元素数量
+    setElements(prev => ({
+      ...prev,
+      [elementId]: newCount
+    }));
+    
+    // 生成AI反馈
+    const newElements = { ...elements, [elementId]: newCount };
+    const newEnvData = bottleType === 'water' 
+      ? calculateWaterEnvironment(newElements, lightHours)
+      : calculateLandEnvironment(newElements, lightHours);
+    
+    const feedback = bottleType === 'water'
+      ? generateWaterFeedback(elementId, delta, newElements, newEnvData)
+      : generateLandFeedback(elementId, delta, newElements, newEnvData);
+    
+    if (feedback) {
+      setTimeout(() => {
+        setMessages(prev => [...prev, { role: 'assistant', content: feedback }]);
+      }, 300);
+    }
+    
+    // 如果是底砂等不需要显示的元素，不添加到生态瓶中
     if (noDisplay) return;
     
+    // 添加时在生态瓶中放置
     if (delta > 0) {
       const bottle = bottleRef.current;
       if (bottle) {
         const rect = bottle.getBoundingClientRect();
+        const itemSize = size === 'large' ? 40 : (size === 'small' ? 20 : 30);
         const newItem: PlacedItem = {
           id: `${elementId}-${Date.now()}`,
           elementId,
           emoji,
-          x: Math.random() * (rect.width - 50) + 25,
-          y: Math.random() * (rect.height - 100) + 70,
+          x: Math.random() * (rect.width - 60) + 30,
+          y: Math.random() * (rect.height - 120) + 60,
           size,
         };
         setPlacedItems(prev => [...prev, newItem]);
       }
     } else {
+      // 移除最后一个
       setPlacedItems(prev => {
         const idx = prev.map(item => item.elementId).lastIndexOf(elementId);
         if (idx !== -1) {
@@ -441,6 +362,23 @@ export default function BottlePage() {
 
   const handleDragEnd = () => {
     setDraggingItem(null);
+  };
+
+  // 获取元素大小对应的样式
+  const getSizeClass = (size: 'normal' | 'small' | 'large') => {
+    switch (size) {
+      case 'large': return 'text-4xl';
+      case 'small': return 'text-xl';
+      default: return 'text-3xl';
+    }
+  };
+
+  const getSizeOffset = (size: 'normal' | 'small' | 'large') => {
+    switch (size) {
+      case 'large': return 20;
+      case 'small': return 10;
+      default: return 15;
+    }
   };
 
   // 选择类型界面
@@ -541,12 +479,8 @@ export default function BottlePage() {
                 }`}
                 style={{
                   background: bottleType === 'water'
-                    ? elements.sand > 0 
-                      ? 'linear-gradient(to bottom, #e0f7fa 0%, #b2ebf2 30%, #80deea 100%)'
-                      : 'linear-gradient(to bottom, #e0f7fa 0%, #b2ebf2 30%, #80deea 100%)'
-                    : elements.soil > 0
-                      ? 'linear-gradient(to bottom, #dcedc8 0%, #c5e1a5 50%, #8bc34a 100%)'
-                      : 'linear-gradient(to bottom, #f5f5f5 0%, #e0e0e0 50%, #bdbdbd 100%)',
+                    ? 'linear-gradient(to bottom, #e0f7fa 0%, #b2ebf2 30%, #80deea 100%)'
+                    : 'linear-gradient(to bottom, #dcedc8 0%, #c5e1a5 50%, #8bc34a 100%)',
                 }}
                 onMouseMove={(e) => draggingItem && handleDrag(e, draggingItem)}
                 onMouseUp={handleDragEnd}
@@ -580,8 +514,8 @@ export default function BottlePage() {
                 {placedItems.map(item => (
                   <div
                     key={item.id}
-                    className={`absolute cursor-move select-none transition-transform hover:scale-110 ${item.size === 'small' ? 'text-xl' : 'text-3xl'}`}
-                    style={{ left: item.x - (item.size === 'small' ? 10 : 15), top: item.y - (item.size === 'small' ? 10 : 15) }}
+                    className={`absolute cursor-move select-none transition-transform hover:scale-110 ${getSizeClass(item.size)}`}
+                    style={{ left: item.x - getSizeOffset(item.size), top: item.y - getSizeOffset(item.size) }}
                     onMouseDown={() => handleDragStart(item.id)}
                     onTouchStart={() => handleDragStart(item.id)}
                   >
@@ -694,7 +628,7 @@ export default function BottlePage() {
                 {currentElements.animals.map(element => (
                   <div key={element.id} className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded-lg border">
                     <div className="flex items-center gap-2">
-                      <span className={`text-2xl ${element.size === 'small' ? 'scale-75' : ''}`}>{element.emoji}</span>
+                      <span className={`text-2xl ${element.size === 'small' ? 'scale-75' : element.size === 'large' ? 'scale-125' : ''}`}>{element.emoji}</span>
                       <div>
                         <p className="text-xs font-medium">{element.name}</p>
                         <p className="text-[10px] text-gray-400">{element.hint}</p>
@@ -738,7 +672,7 @@ export default function BottlePage() {
                 {currentElements.materials.map(element => (
                   <div key={element.id} className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded-lg border">
                     <div className="flex items-center gap-2">
-                      <span className="text-2xl">{element.emoji}</span>
+                      <span className={`text-2xl ${element.size === 'small' ? 'scale-75' : element.size === 'large' ? 'scale-125' : ''}`}>{element.emoji}</span>
                       <div>
                         <p className="text-xs font-medium">{element.name}</p>
                         <p className="text-[10px] text-gray-400">{element.hint}</p>
@@ -784,6 +718,7 @@ export default function BottlePage() {
                       </div>
                     </div>
                   )}
+                  <div ref={messagesEndRef} />
                 </div>
               </ScrollArea>
               <div className="p-2 border-t flex-shrink-0">
