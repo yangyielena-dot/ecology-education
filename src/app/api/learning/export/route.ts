@@ -39,6 +39,7 @@ export async function GET(request: NextRequest) {
         total_sessions: 0,
         total_messages: 0,
         total_images: 0,
+        total_adjustments: 0,
       });
     }
 
@@ -70,6 +71,18 @@ export async function GET(request: NextRequest) {
       // 图片查询失败不影响整体导出，继续处理
     }
 
+    // 获取所有会话的数据调整记录
+    const { data: adjustments, error: adjustmentsError } = await client
+      .from('bottle_adjustments')
+      .select('*')
+      .in('session_id', sessionIds)
+      .order('created_at', { ascending: true });
+
+    if (adjustmentsError) {
+      console.error('查询调整记录失败:', adjustmentsError);
+      // 调整记录查询失败不影响整体导出，继续处理
+    }
+
     // 将消息按会话分组
     const messagesBySession: Record<string, typeof messages> = {};
     messages?.forEach(msg => {
@@ -89,6 +102,19 @@ export async function GET(request: NextRequest) {
       const sessionImages = imagesBySession[img.session_id];
       if (sessionImages) {
         sessionImages.push(img);
+      }
+    });
+
+    // 将调整记录按会话分组
+    const adjustmentsBySession: Record<string, NonNullable<typeof adjustments>[number][]> = {};
+    adjustments?.forEach(adj => {
+      if (!adj) return;
+      if (!adjustmentsBySession[adj.session_id]) {
+        adjustmentsBySession[adj.session_id] = [];
+      }
+      const sessionAdjs = adjustmentsBySession[adj.session_id];
+      if (sessionAdjs) {
+        sessionAdjs.push(adj);
       }
     });
 
@@ -112,7 +138,19 @@ export async function GET(request: NextRequest) {
       images: (imagesBySession[session.id] || []).map(img => ({
         url: img.image_url,
         prompt: img.prompt,
+        image_type: img.image_type,
         timestamp: img.created_at,
+      })),
+      adjustments: (adjustmentsBySession[session.id] || []).map(adj => ({
+        adjustment_type: adj.adjustment_type,
+        element_id: adj.element_id,
+        element_name: adj.element_name,
+        delta: adj.delta,
+        new_value: adj.new_value,
+        light_hours: adj.light_hours,
+        elements_snapshot: adj.elements_snapshot ? JSON.parse(adj.elements_snapshot) : null,
+        env_data: adj.env_data ? JSON.parse(adj.env_data) : null,
+        timestamp: adj.created_at,
       })),
     }));
 
@@ -124,6 +162,7 @@ export async function GET(request: NextRequest) {
       total_sessions: sessions.length,
       total_messages: messages?.length || 0,
       total_images: images?.length || 0,
+      total_adjustments: adjustments?.length || 0,
       sessions: fullRecords,
     });
   } catch (error) {

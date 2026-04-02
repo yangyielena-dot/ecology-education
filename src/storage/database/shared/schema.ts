@@ -1,4 +1,4 @@
-import { pgTable, serial, varchar, timestamp, text, index, integer } from "drizzle-orm/pg-core"
+import { pgTable, serial, varchar, timestamp, text, index, integer, jsonb } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 
 
@@ -55,10 +55,33 @@ export const generatedImages = pgTable(
     session_id: varchar("session_id", { length: 36 }).notNull().references(() => learningSessions.id, { onDelete: "cascade" }),
     image_url: text("image_url").notNull(), // 图片URL
     prompt: text("prompt"), // 生成图片的提示词
+    image_type: varchar("image_type", { length: 20 }).default("generated"), // generated/generated_bottle/result
     created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
     index("generated_images_session_id_idx").on(table.session_id),
     index("generated_images_created_at_idx").on(table.created_at),
+  ]
+);
+
+// 生态瓶数据调整记录表
+export const bottleAdjustments = pgTable(
+  "bottle_adjustments",
+  {
+    id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+    session_id: varchar("session_id", { length: 36 }).notNull().references(() => learningSessions.id, { onDelete: "cascade" }),
+    adjustment_type: varchar("adjustment_type", { length: 20 }).notNull(), // element/light
+    element_id: varchar("element_id", { length: 50 }), // 调整的元素ID
+    element_name: varchar("element_name", { length: 50 }), // 元素名称
+    delta: integer("delta"), // 变化量（+1/-1）
+    new_value: integer("new_value"), // 新值
+    light_hours: integer("light_hours"), // 光照时间
+    elements_snapshot: text("elements_snapshot"), // 当前所有元素的JSON快照
+    env_data: text("env_data"), // 环境数据JSON快照
+    created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("bottle_adjustments_session_id_idx").on(table.session_id),
+    index("bottle_adjustments_created_at_idx").on(table.created_at),
   ]
 );

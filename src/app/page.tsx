@@ -416,7 +416,7 @@ export default function Home() {
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-base">
                         {MODULE_NAMES[sessionData.session.module_type] || sessionData.session.module_type}
-                        {sessionData.session.module_detail && ` - ${sessionData.session.module_detail}`}
+                        {sessionData.session.module_detail && ` - ${sessionData.session.module_detail === 'water' ? '水生' : sessionData.session.module_detail === 'land' ? '陆生' : sessionData.session.module_detail}`}
                       </CardTitle>
                       <div className="flex items-center gap-2 text-sm text-gray-500">
                         {sessionData.session.score !== null && (
@@ -448,14 +448,48 @@ export default function Home() {
                               href={img.url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="flex-shrink-0"
+                              className="flex-shrink-0 group relative"
                             >
                               <img
                                 src={img.url}
                                 alt={`生成的图片 ${imgIndex + 1}`}
-                                className="w-24 h-24 object-cover rounded-lg border-2 border-orange-200 hover:border-orange-400 transition-colors"
+                                className="w-32 h-24 object-cover rounded-lg border-2 border-orange-200 hover:border-orange-400 transition-colors"
                               />
+                              {img.image_type === 'result' && (
+                                <span className="absolute top-1 left-1 bg-green-500 text-white text-[10px] px-1.5 py-0.5 rounded">
+                                  最终效果
+                                </span>
+                              )}
                             </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* 数据调整记录 */}
+                    {sessionData.adjustments && sessionData.adjustments.length > 0 && (
+                      <div className="p-3 bg-cyan-50 dark:bg-cyan-900/20 border-b">
+                        <p className="text-sm font-medium text-cyan-700 dark:text-cyan-400 mb-2">
+                          ⚙️ 操作记录 ({sessionData.adjustments.length}次调整)
+                        </p>
+                        <div className="max-h-40 overflow-y-auto space-y-1">
+                          {sessionData.adjustments.map((adj: any, adjIndex: number) => (
+                            <div key={adjIndex} className="text-xs flex items-center gap-2 p-1.5 bg-white/50 dark:bg-gray-800/50 rounded">
+                              <span className="text-gray-400 w-16 flex-shrink-0">
+                                {new Date(adj.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                              {adj.adjustment_type === 'element' ? (
+                                <span>
+                                  {adj.delta > 0 ? '➕' : '➖'} {adj.element_name}
+                                  {adj.delta > 0 ? ` +${adj.delta}` : ` ${adj.delta}`}
+                                  {adj.new_value !== undefined && ` (当前: ${adj.new_value})`}
+                                </span>
+                              ) : (
+                                <span>
+                                  ☀️ 光照时间: {adj.light_hours}小时
+                                </span>
+                              )}
+                            </div>
                           ))}
                         </div>
                       </div>

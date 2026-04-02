@@ -308,11 +308,44 @@ export default function BottlePage() {
     const currentCount = elements[elementId] || 0;
     const newCount = Math.max(0, currentCount + delta);
     
+    // 获取元素名称
+    const elementInfo = [...currentElements.animals, ...currentElements.plants, ...currentElements.materials]
+      .find(e => e.id === elementId);
+    const elementName = elementInfo?.name || elementId;
+    
     // 更新元素数量
-    setElements(prev => ({
-      ...prev,
-      [elementId]: newCount
-    }));
+    setElements(prev => {
+      const newElements = {
+        ...prev,
+        [elementId]: newCount
+      };
+      
+      // 计算新的环境数据
+      const newEnvData = bottleType === 'water' 
+        ? calculateWaterEnvironment(newElements, lightHours)
+        : calculateLandEnvironment(newElements, lightHours);
+      
+      // 保存调整记录
+      if (sessionId) {
+        fetch('/api/learning/adjustment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            session_id: sessionId,
+            adjustment_type: 'element',
+            element_id: elementId,
+            element_name: elementName,
+            delta: delta,
+            new_value: newCount,
+            light_hours: lightHours,
+            elements_snapshot: newElements,
+            env_data: newEnvData,
+          }),
+        }).catch(err => console.error('保存调整记录失败:', err));
+      }
+      
+      return newElements;
+    });
     
     // 生成AI反馈
     const newElements = { ...elements, [elementId]: newCount };
@@ -391,6 +424,38 @@ export default function BottlePage() {
     setDraggingItem(null);
   };
 
+  // 处理光照调整
+  const handleLightChange = (value: number[]) => {
+    const newLightHours = value[0];
+    const oldLightHours = lightHours;
+    
+    setLightHours(newLightHours);
+    
+    // 计算新的环境数据
+    const newEnvData = bottleType === 'water' 
+      ? calculateWaterEnvironment(elements, newLightHours)
+      : calculateLandEnvironment(elements, newLightHours);
+    
+    // 保存光照调整记录
+    if (sessionId && newLightHours !== oldLightHours) {
+      fetch('/api/learning/adjustment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: sessionId,
+          adjustment_type: 'light',
+          element_id: 'light_hours',
+          element_name: '光照时间',
+          delta: newLightHours - oldLightHours,
+          new_value: newLightHours,
+          light_hours: newLightHours,
+          elements_snapshot: elements,
+          env_data: newEnvData,
+        }),
+      }).catch(err => console.error('保存光照调整记录失败:', err));
+    }
+  };
+
   // 完成设计
   const handleComplete = async () => {
     if (isCompleted) {
@@ -462,6 +527,48 @@ ${bottleType === 'water' ? `🌊 水生生态瓶的关键：
     }]);
     // 保存评价消息
     saveMessage('assistant', fullMessage);
+
+    // 生成生态瓶效果图片
+    if (sessionId) {
+      try {
+        // 构建图片提示词
+        const elementsList: string[] = [];
+        const allElements = [...currentElements.animals, ...currentElements.plants, ...currentElements.materials];
+        for (const [id, count] of Object.entries(elements)) {
+          if (count > 0) {
+            const element = allElements.find(e => e.id === id);
+            if (element && !element.noDisplay) {
+              elementsList.push(`${element.name}${count > 1 ? count + '个' : ''}`);
+            }
+          }
+        }
+        
+        const promptText = `${bottleType === 'water' ? '水生' : '陆生'}生态瓶，透明玻璃瓶，里面有：${elementsList.join('、')}。${bottleType === 'water' ? '清澈的水，水草漂浮，小鱼游动' : '土壤上长着苔藓，枯木和石子点缀'}。高清写实风格，明亮的光线。`;
+        
+        const response = await fetch('/api/generate-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: promptText }),
+        });
+
+        const data = await response.json();
+        if (data.imageUrl) {
+          // 保存生成的图片到学习记录
+          await fetch('/api/learning/image', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              session_id: sessionId,
+              image_url: data.imageUrl,
+              prompt: promptText,
+              image_type: 'result',
+            }),
+          });
+        }
+      } catch (error) {
+        console.error('生成生态瓶图片失败:', error);
+      }
+    }
   };
 
   // 获取元素大小对应的样式
@@ -722,7 +829,7 @@ ${bottleType === 'water' ? `🌊 水生生态瓶的关键：
                   </div>
                   <Slider
                     value={[lightHours]}
-                    onValueChange={(v) => setLightHours(v[0])}
+                    onValueChange={handleLightChange}
                     min={0}
                     max={14}
                     step={1}
