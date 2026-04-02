@@ -39,12 +39,22 @@ export default function Home() {
     completed_sessions: number;
   } | null>(null);
 
-  // 页面加载时始终弹出输入框，让用户输入ID
+  // 页面加载时检查是否有已保存的学生ID
   useEffect(() => {
-    // 清除旧的缓存数据，确保每次都需要重新输入ID
-    localStorage.removeItem('student_id');
-    localStorage.removeItem('student_name');
-    setIsDialogOpen(true);
+    const savedId = localStorage.getItem('student_id');
+    const savedName = localStorage.getItem('student_name');
+    
+    if (savedId) {
+      // 已有ID，直接使用，不弹窗
+      setStudentId(savedId);
+      if (savedName) {
+        setStudentName(savedName);
+      }
+      setIsDialogOpen(false);
+    } else {
+      // 没有ID，弹出输入框
+      setIsDialogOpen(true);
+    }
   }, []);
 
   // 保存学生ID
