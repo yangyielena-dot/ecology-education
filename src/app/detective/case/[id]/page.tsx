@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -15,7 +15,7 @@ import {
 import { 
   ArrowLeft, Send, Loader2, Fish, Droplets, Skull, 
   Thermometer, Sun, Activity, Beaker, Stethoscope, Sparkles, Image as ImageIcon,
-  TrendingUp, TrendingDown, Minus
+  TrendingUp, TrendingDown, Minus, CheckCircle
 } from 'lucide-react';
 import { useLearningRecord } from '@/hooks/useLearningRecord';
 
@@ -178,6 +178,7 @@ function DataIndicator({ label, value, unit, healthy, predicted, prevValue }: {
 
 export default function CasePage() {
   const params = useParams();
+  const router = useRouter();
   const caseId = params.id as string;
   const caseData = CASE_DATA[caseId];
   
@@ -189,17 +190,42 @@ export default function CasePage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [treatmentImage, setTreatmentImage] = useState<string | null>(null);
   const [treatmentResult, setTreatmentResult] = useState<string | null>(null);
+  const [isCompleting, setIsCompleting] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const prevMessagesLengthRef = useRef(0);
 
   // 学习记录
-  const { startSession, saveMessage, endSession } = useLearningRecord({
+  const { startSession, saveMessage, endSession, sessionId } = useLearningRecord({
     moduleType: 'detective',
     moduleDetail: caseId,
   });
 
   // 计算预测数据
   const predictedData = useMemo(() => calculatePredictedData(treatmentParams), [treatmentParams]);
+
+  // 完成学习
+  const handleComplete = async () => {
+    if (!sessionId || isCompleting) return;
+    
+    setIsCompleting(true);
+    try {
+      const response = await fetch('/api/learning/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId }),
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        endSession();
+        router.push('/');
+      }
+    } catch (error) {
+      console.error('完成学习失败:', error);
+    } finally {
+      setIsCompleting(false);
+    }
+  };
 
   // 初始化消息和学习会话
   useEffect(() => {
@@ -314,7 +340,19 @@ export default function CasePage() {
           <span className="font-bold text-purple-700">{caseData.name}</span>
           <span className="text-sm text-gray-500">- {caseData.description}</span>
         </div>
-        <div className="w-16" />
+        <Button 
+          size="sm"
+          onClick={handleComplete}
+          disabled={isCompleting || !sessionId}
+          className="gap-1 bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700"
+        >
+          {isCompleting ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <CheckCircle className="w-4 h-4" />
+          )}
+          完成学习
+        </Button>
       </div>
 
       {/* 故事条 - 紧凑 */}

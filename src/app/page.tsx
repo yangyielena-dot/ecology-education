@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -13,7 +13,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Globe, FlaskConical, Leaf, TreePine, Search, Download, User, FileText, Loader2 } from 'lucide-react';
+import { Globe, FlaskConical, Leaf, TreePine, Search, Download, User, FileText, Loader2, Lock } from 'lucide-react';
 
 // 模块名称映射
 const MODULE_NAMES: Record<string, string> = {
@@ -23,12 +23,14 @@ const MODULE_NAMES: Record<string, string> = {
 };
 
 export default function Home() {
+  const router = useRouter();
   const [studentId, setStudentId] = useState<string>('');
   const [studentName, setStudentName] = useState<string>('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [reportData, setReportData] = useState<any>(null);
+  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
 
   // 页面加载时检查是否已有学生ID
   useEffect(() => {
@@ -37,6 +39,9 @@ export default function Home() {
     if (savedId) {
       setStudentId(savedId);
       setStudentName(savedName || '');
+    } else {
+      // 如果没有学生ID，自动弹出输入框
+      setIsDialogOpen(true);
     }
   }, []);
 
@@ -48,7 +53,23 @@ export default function Home() {
         localStorage.setItem('student_name', studentName.trim());
       }
       setIsDialogOpen(false);
+      
+      // 如果有待导航的页面，现在导航
+      if (pendingNavigation) {
+        router.push(pendingNavigation);
+        setPendingNavigation(null);
+      }
     }
+  };
+
+  // 进入模块前的检查
+  const handleNavigate = (path: string) => {
+    if (!studentId) {
+      setPendingNavigation(path);
+      setIsDialogOpen(true);
+      return;
+    }
+    router.push(path);
   };
 
   // 导出学习记录（JSON格式）
@@ -209,11 +230,17 @@ export default function Home() {
                   <span>AI生成你设计的生态星球图片</span>
                 </li>
               </ul>
-              <Link href="/planet">
-                <Button className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold py-5 text-base">
-                  开始设计生态星球
-                </Button>
-              </Link>
+              <Button 
+                className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold py-5 text-base"
+                onClick={() => handleNavigate('/planet')}
+              >
+                {studentId ? '开始设计生态星球' : (
+                  <span className="flex items-center gap-2">
+                    <Lock className="w-4 h-4" />
+                    请先输入学生ID
+                  </span>
+                )}
+              </Button>
             </CardContent>
           </Card>
 
@@ -245,11 +272,17 @@ export default function Home() {
                   <span>实时监控环境数据（含氧量、湿度等）</span>
                 </li>
               </ul>
-              <Link href="/bottle">
-                <Button className="w-full bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white font-semibold py-5 text-base">
-                  开始设计生态瓶
-                </Button>
-              </Link>
+              <Button 
+                className="w-full bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white font-semibold py-5 text-base"
+                onClick={() => handleNavigate('/bottle')}
+              >
+                {studentId ? '开始设计生态瓶' : (
+                  <span className="flex items-center gap-2">
+                    <Lock className="w-4 h-4" />
+                    请先输入学生ID
+                  </span>
+                )}
+              </Button>
             </CardContent>
           </Card>
 
@@ -281,11 +314,17 @@ export default function Home() {
                   <span>开处方治疗，观察恢复效果</span>
                 </li>
               </ul>
-              <Link href="/detective">
-                <Button className="w-full bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white font-semibold py-5 text-base">
-                  开始诊断病例
-                </Button>
-              </Link>
+              <Button 
+                className="w-full bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white font-semibold py-5 text-base"
+                onClick={() => handleNavigate('/detective')}
+              >
+                {studentId ? '开始诊断病例' : (
+                  <span className="flex items-center gap-2">
+                    <Lock className="w-4 h-4" />
+                    请先输入学生ID
+                  </span>
+                )}
+              </Button>
             </CardContent>
           </Card>
         </div>
@@ -349,7 +388,7 @@ export default function Home() {
             
             <div className="space-y-4">
               {/* 统计概览 */}
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-4 gap-4">
                 <div className="bg-green-50 dark:bg-green-900/30 p-4 rounded-lg text-center">
                   <p className="text-2xl font-bold text-green-600">{reportData.total_sessions}</p>
                   <p className="text-sm text-gray-500">学习次数</p>
@@ -363,6 +402,10 @@ export default function Home() {
                     {reportData.sessions?.filter((s: any) => s.session.status === 'completed').length || 0}
                   </p>
                   <p className="text-sm text-gray-500">完成任务数</p>
+                </div>
+                <div className="bg-orange-50 dark:bg-orange-900/30 p-4 rounded-lg text-center">
+                  <p className="text-2xl font-bold text-orange-600">{reportData.total_images || 0}</p>
+                  <p className="text-sm text-gray-500">生成图片数</p>
                 </div>
               </div>
 
@@ -392,6 +435,32 @@ export default function Home() {
                     </p>
                   </CardHeader>
                   <CardContent className="p-0">
+                    {/* 生成的图片 */}
+                    {sessionData.images && sessionData.images.length > 0 && (
+                      <div className="p-3 bg-orange-50 dark:bg-orange-900/20 border-b">
+                        <p className="text-sm font-medium text-orange-700 dark:text-orange-400 mb-2">
+                          🎨 生成的图片 ({sessionData.images.length}张)
+                        </p>
+                        <div className="flex gap-2 overflow-x-auto">
+                          {sessionData.images.map((img: any, imgIndex: number) => (
+                            <a
+                              key={imgIndex}
+                              href={img.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex-shrink-0"
+                            >
+                              <img
+                                src={img.url}
+                                alt={`生成的图片 ${imgIndex + 1}`}
+                                className="w-24 h-24 object-cover rounded-lg border-2 border-orange-200 hover:border-orange-400 transition-colors"
+                              />
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
                     {sessionData.messages.length > 0 ? (
                       <div className="divide-y max-h-60 overflow-y-auto">
                         {sessionData.messages.map((msg: any, msgIndex: number) => (

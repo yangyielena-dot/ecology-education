@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
         sessions: [],
         total_sessions: 0,
         total_messages: 0,
+        total_images: 0,
       });
     }
 
@@ -57,6 +58,18 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // 获取所有会话生成的图片
+    const { data: images, error: imagesError } = await client
+      .from('generated_images')
+      .select('*')
+      .in('session_id', sessionIds)
+      .order('created_at', { ascending: true });
+
+    if (imagesError) {
+      console.error('查询图片失败:', imagesError);
+      // 图片查询失败不影响整体导出，继续处理
+    }
+
     // 将消息按会话分组
     const messagesBySession: Record<string, typeof messages> = {};
     messages?.forEach(msg => {
@@ -64,6 +77,19 @@ export async function GET(request: NextRequest) {
         messagesBySession[msg.session_id] = [];
       }
       messagesBySession[msg.session_id].push(msg);
+    });
+
+    // 将图片按会话分组
+    const imagesBySession: Record<string, NonNullable<typeof images>[number][]> = {};
+    images?.forEach(img => {
+      if (!img) return;
+      if (!imagesBySession[img.session_id]) {
+        imagesBySession[img.session_id] = [];
+      }
+      const sessionImages = imagesBySession[img.session_id];
+      if (sessionImages) {
+        sessionImages.push(img);
+      }
     });
 
     // 组装完整的学习记录
@@ -83,6 +109,11 @@ export async function GET(request: NextRequest) {
         timestamp: msg.created_at,
         metadata: msg.metadata ? JSON.parse(msg.metadata) : null,
       })),
+      images: (imagesBySession[session.id] || []).map(img => ({
+        url: img.image_url,
+        prompt: img.prompt,
+        timestamp: img.created_at,
+      })),
     }));
 
     return NextResponse.json({
@@ -92,6 +123,7 @@ export async function GET(request: NextRequest) {
       export_time: new Date().toISOString(),
       total_sessions: sessions.length,
       total_messages: messages?.length || 0,
+      total_images: images?.length || 0,
       sessions: fullRecords,
     });
   } catch (error) {

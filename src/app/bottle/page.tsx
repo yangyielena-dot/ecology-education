@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -10,7 +11,7 @@ import { VoiceInput } from '@/components/ui/voice-input';
 import { Slider } from '@/components/ui/slider';
 import { 
   Loader2, Send, FlaskConical, Droplets, Wind,
-  ArrowLeft, Sparkles, Sun, Plus, Minus
+  ArrowLeft, Sparkles, Sun, Plus, Minus, CheckCircle
 } from 'lucide-react';
 import { useLearningRecord } from '@/hooks/useLearningRecord';
 
@@ -199,6 +200,7 @@ function generateLandFeedback(
 }
 
 export default function BottlePage() {
+  const router = useRouter();
   const [bottleType, setBottleType] = useState<'water' | 'land' | null>(null);
   const [elements, setElements] = useState<Record<string, number>>({});
   const [placedItems, setPlacedItems] = useState<PlacedItem[]>([]);
@@ -209,6 +211,7 @@ export default function BottlePage() {
   const [draggingItem, setDraggingItem] = useState<string | null>(null);
   const [isCompleted, setIsCompleted] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
+  const [isCompleting, setIsCompleting] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const prevMessagesLengthRef = useRef(0);
   const bottleRef = useRef<HTMLDivElement>(null);
@@ -389,13 +392,31 @@ export default function BottlePage() {
   };
 
   // 完成设计
-  const handleComplete = () => {
+  const handleComplete = async () => {
+    if (isCompleted) {
+      // 如果已经完成设计，点击按钮返回首页
+      if (sessionId) {
+        setIsCompleting(true);
+        try {
+          await fetch('/api/learning/complete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_id: sessionId, score: finalScore }),
+          });
+          endSession();
+          router.push('/');
+        } catch (error) {
+          console.error('完成学习失败:', error);
+        } finally {
+          setIsCompleting(false);
+        }
+      }
+      return;
+    }
+
     const score = envData.stability;
     setFinalScore(score);
     setIsCompleted(true);
-
-    // 结束学习会话并记录评分
-    endSession(score);
 
     // 根据评分生成评价
     let evaluation = '';
@@ -541,7 +562,19 @@ ${bottleType === 'water' ? `🌊 水生生态瓶的关键：
             设计{bottleType === 'water' ? '水生' : '陆生'}生态瓶
           </span>
         </div>
-        <div className="w-16" />
+        <Button 
+          size="sm"
+          onClick={handleComplete}
+          disabled={isCompleting || !sessionId}
+          className="gap-1 bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700"
+        >
+          {isCompleting ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <CheckCircle className="w-4 h-4" />
+          )}
+          完成学习
+        </Button>
       </div>
 
       {/* 主内容区 */}

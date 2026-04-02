@@ -46,3 +46,19 @@ export const conversationMessages = pgTable(
     index("conversation_messages_created_at_idx").on(table.created_at),
   ]
 );
+
+// 生成图片表 - 记录AI生成的图片
+export const generatedImages = pgTable(
+  "generated_images",
+  {
+    id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+    session_id: varchar("session_id", { length: 36 }).notNull().references(() => learningSessions.id, { onDelete: "cascade" }),
+    image_url: text("image_url").notNull(), // 图片URL
+    prompt: text("prompt"), // 生成图片的提示词
+    created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("generated_images_session_id_idx").on(table.session_id),
+    index("generated_images_created_at_idx").on(table.created_at),
+  ]
+);

@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { VoiceInput } from '@/components/ui/voice-input';
-import { Loader2, Send, Globe, Leaf, TreePine, Bird, Fish, ArrowLeft } from 'lucide-react';
+import { Loader2, Send, Globe, Leaf, TreePine, Bird, Fish, ArrowLeft, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useLearningRecord } from '@/hooks/useLearningRecord';
 
@@ -16,6 +17,7 @@ interface Message {
 }
 
 export default function PlanetPage() {
+  const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
@@ -26,6 +28,7 @@ export default function PlanetPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const prevMessagesLengthRef = useRef(0);
 
@@ -50,6 +53,30 @@ export default function PlanetPage() {
     }
     prevMessagesLengthRef.current = messages.length;
   }, [messages]);
+
+  // 完成学习
+  const handleComplete = async () => {
+    if (!sessionId || isCompleting) return;
+    
+    setIsCompleting(true);
+    try {
+      const response = await fetch('/api/learning/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId }),
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        endSession();
+        router.push('/');
+      }
+    } catch (error) {
+      console.error('完成学习失败:', error);
+    } finally {
+      setIsCompleting(false);
+    }
+  };
 
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return;
@@ -111,17 +138,30 @@ export default function PlanetPage() {
         .map(m => m.content)
         .join('，');
 
+      const promptText = `生态星球场景：${conversationText}。只包含上述提到的生物和环境元素，不要添加任何其他生物或元素。高清数字艺术风格。`;
+
       const response = await fetch('/api/generate-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          prompt: `生态星球场景：${conversationText}。只包含上述提到的生物和环境元素，不要添加任何其他生物或元素。高清数字艺术风格。` 
-        }),
+        body: JSON.stringify({ prompt: promptText }),
       });
 
       const data = await response.json();
       if (data.imageUrl) {
         setGeneratedImage(data.imageUrl);
+
+        // 保存生成的图片到学习记录
+        if (sessionId) {
+          await fetch('/api/learning/image', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              session_id: sessionId,
+              image_url: data.imageUrl,
+              prompt: promptText,
+            }),
+          });
+        }
       }
     } catch (error) {
       console.error('Error generating image:', error);
@@ -151,7 +191,18 @@ export default function PlanetPage() {
               重建生态星球
             </h1>
           </div>
-          <div className="w-20" />
+          <Button 
+            onClick={handleComplete}
+            disabled={isCompleting || !sessionId}
+            className="gap-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
+          >
+            {isCompleting ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <CheckCircle className="w-4 h-4" />
+            )}
+            完成学习
+          </Button>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-6">
