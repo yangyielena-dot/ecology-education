@@ -11,10 +11,9 @@ import { VoiceInput } from '@/components/ui/voice-input';
 import { Slider } from '@/components/ui/slider';
 import { 
   Loader2, Send, FlaskConical, Droplets, Wind,
-  ArrowLeft, Sparkles, Sun, Plus, Minus, CheckCircle, Camera
+  ArrowLeft, Sparkles, Sun, Plus, Minus, CheckCircle
 } from 'lucide-react';
 import { useLearningRecord } from '@/hooks/useLearningRecord';
-import html2canvas from 'html2canvas';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -102,21 +101,13 @@ function calculateWaterEnvironment(elements: Record<string, number>, lightHours:
   waste -= snailCount * 3;
   waste -= waterweedCount * 2;
   
-  // 改进的稳定性计算
-  // 溶氧量：只需要不低于40即可，高于60不扣分（氧气充足是好事）
-  const oxygenPenalty = oxygen < 40 ? (40 - oxygen) * 1.5 : 0;
-  // 废物：越低越好，高于30开始扣分
-  const wastePenalty = waste > 30 ? (waste - 30) * 1.2 : 0;
-  // 生物数量限制：动物不能太多
-  const totalAnimals = fishCount + snailCount;
-  const animalPenalty = totalAnimals > 8 ? (totalAnimals - 8) * 5 : 0;
-  
-  const stability = Math.max(0, Math.min(100, Math.round(100 - oxygenPenalty - wastePenalty - animalPenalty)));
+  const idealOxygen = 60;
+  const stability = Math.max(0, 100 - Math.abs(oxygen - idealOxygen) - Math.abs(waste - 30));
   
   return {
     oxygen: Math.max(0, Math.min(100, Math.round(oxygen))),
     waste: Math.max(0, Math.min(100, Math.round(waste))),
-    stability,
+    stability: Math.max(0, Math.min(100, Math.round(stability))),
   };
 }
 
@@ -140,21 +131,13 @@ function calculateLandEnvironment(elements: Record<string, number>, lightHours: 
   organic += pillbugCount * 3;
   organic -= mossCount * 2;
   
-  // 改进的稳定性计算
-  // 湿度：40-80之间最好，太低或太高都会扣分
-  const humidityPenalty = humidity < 40 ? (40 - humidity) * 1.2 : (humidity > 80 ? (humidity - 80) * 1 : 0);
-  // 有机物：20-60之间最好
-  const organicPenalty = organic < 20 ? (20 - organic) * 0.8 : (organic > 60 ? (organic - 60) * 1.2 : 0);
-  // 生物数量限制
   const totalAnimals = earthwormCount + antCount + pillbugCount + beetleCount;
-  const animalPenalty = totalAnimals > 15 ? (totalAnimals - 15) * 3 : 0;
-  
-  const stability = Math.max(0, Math.min(100, Math.round(100 - humidityPenalty - organicPenalty - animalPenalty)));
+  const stability = Math.max(0, 100 - Math.abs(humidity - 60) - Math.abs(organic - 40) - Math.max(0, totalAnimals - 10) * 3);
   
   return {
     oxygen: Math.max(0, Math.min(100, Math.round(humidity))),
     waste: Math.max(0, Math.min(100, Math.round(organic))),
-    stability,
+    stability: Math.max(0, Math.min(100, Math.round(stability))),
   };
 }
 
@@ -229,14 +212,12 @@ export default function BottlePage() {
   const [isCompleted, setIsCompleted] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
   const [isCompleting, setIsCompleting] = useState(false);
-  const [isCapturing, setIsCapturing] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const prevMessagesLengthRef = useRef(0);
   const bottleRef = useRef<HTMLDivElement>(null);
-  const snapshotRef = useRef<HTMLDivElement>(null);
 
   // 学习记录
-  const { startSession, saveMessage, endSession, resumeSession, sessionId } = useLearningRecord({
+  const { startSession, saveMessage, endSession, sessionId } = useLearningRecord({
     moduleType: 'bottle',
     moduleDetail: bottleType || undefined,
   });
@@ -246,174 +227,24 @@ export default function BottlePage() {
     ? calculateWaterEnvironment(elements, lightHours) 
     : calculateLandEnvironment(elements, lightHours);
 
-  // 生成快照
-  const handleCaptureSnapshot = async () => {
-    if (!snapshotRef.current || !sessionId) return;
-    
-    setIsCapturing(true);
-    try {
-      const canvas = await html2canvas(snapshotRef.current, {
-        backgroundColor: null,
-        scale: 2,
-      });
-      
-      const imageUrl = canvas.toDataURL('image/png');
-      
-      // 下载图片
-      const link = document.createElement('a');
-      link.href = imageUrl;
-      link.download = `生态瓶快照_${bottleType === 'water' ? '水生' : '陆生'}_${new Date().toLocaleString('zh-CN').replace(/[/:]/g, '-')}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      // 上传到存储并保存记录
-      const response = await fetch('/api/learning/image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          session_id: sessionId,
-          image_url: imageUrl,
-          prompt: `生态瓶快照 - ${bottleType === 'water' ? '水生' : '陆生'} - 溶氧量:${envData.oxygen}% 废物:${envData.waste}% 评分:${envData.stability}`,
-          image_type: 'snapshot',
-        }),
-      });
-      
-      // 添加反馈消息
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: '📸 快照已保存！你可以继续调整生态瓶，或点击"完成设计"结束学习。' 
-      }]);
-    } catch (error) {
-      console.error('生成快照失败:', error);
-    } finally {
-      setIsCapturing(false);
-    }
-  };
-
-  // 检查并恢复未完成的学习
-  const [showResumeDialog, setShowResumeDialog] = useState(false);
-  const [pendingSession, setPendingSession] = useState<any>(null);
-
-  // 初始化时检查是否有未完成的会话
+  // 初始化消息和学习会话
   useEffect(() => {
     if (bottleType) {
-      const checkAndResumeSession = async () => {
-        const studentId = localStorage.getItem('student_id');
-        if (!studentId) {
-          // 没有学生ID，创建新会话
-          const typeName = bottleType === 'water' ? '水生' : '陆生';
-          const initialMessage = `你好！我是生态瓶设计助手苗苗 🌱
+      const typeName = bottleType === 'water' ? '水生' : '陆生';
+      const initialMessage = `你好！我是生态瓶设计助手苗苗 🌱
 
 这是一个空的${typeName}生态瓶，让我们一起来设计它吧！
 
 你可以从右边选择生物和材料添加到生态瓶中。试试看！`;
-          setMessages([{ role: 'assistant', content: initialMessage }]);
-          setElements({});
-          setPlacedItems([]);
-          setLightHours(8);
-          setIsCompleted(false);
-          startSession();
-          return;
-        }
-
-        try {
-          // 检查是否有未完成的会话
-          const response = await fetch(`/api/learning/session?student_id=${studentId}&module_type=bottle&module_detail=${bottleType}&status=active&limit=1`);
-          const data = await response.json();
-          
-          if (data.success && data.sessions && data.sessions.length > 0) {
-            // 有未完成的会话，询问用户是否继续
-            const session = data.sessions[0];
-            const hasMessages = session.conversation_messages && session.conversation_messages.length > 0;
-            
-            if (hasMessages) {
-              setPendingSession(session);
-              setShowResumeDialog(true);
-              return;
-            }
-          }
-          
-          // 没有未完成的会话，创建新会话
-          const typeName = bottleType === 'water' ? '水生' : '陆生';
-          const initialMessage = `你好！我是生态瓶设计助手苗苗 🌱
-
-这是一个空的${typeName}生态瓶，让我们一起来设计它吧！
-
-你可以从右边选择生物和材料添加到生态瓶中。试试看！`;
-          setMessages([{ role: 'assistant', content: initialMessage }]);
-          setElements({});
-          setPlacedItems([]);
-          setLightHours(8);
-          setIsCompleted(false);
-          startSession();
-        } catch (error) {
-          console.error('检查会话失败:', error);
-          // 出错时创建新会话
-          const typeName = bottleType === 'water' ? '水生' : '陆生';
-          const initialMessage = `你好！我是生态瓶设计助手苗苗 🌱
-
-这是一个空的${typeName}生态瓶，让我们一起来设计它吧！
-
-你可以从右边选择生物和材料添加到生态瓶中。试试看！`;
-          setMessages([{ role: 'assistant', content: initialMessage }]);
-          setElements({});
-          setPlacedItems([]);
-          setLightHours(8);
-          setIsCompleted(false);
-          startSession();
-        }
-      };
-      
-      checkAndResumeSession();
+      setMessages([{ role: 'assistant', content: initialMessage }]);
+      setElements({});
+      setPlacedItems([]);
+      setLightHours(8);
+      setIsCompleted(false);
+      // 创建学习会话
+      startSession();
     }
   }, [bottleType, startSession]);
-
-  // 恢复之前的会话
-  const handleResumeSession = () => {
-    if (!pendingSession) return;
-    
-    // 恢复会话ID
-    resumeSession(pendingSession.id);
-    
-    // 恢复消息
-    if (pendingSession.conversation_messages && pendingSession.conversation_messages.length > 0) {
-      const restoredMessages = pendingSession.conversation_messages.map((msg: any) => ({
-        role: msg.role,
-        content: msg.content,
-      }));
-      setMessages(restoredMessages);
-    }
-    
-    // 恢复元素状态（从最后一条消息的metadata中获取，如果没有则从调整记录获取）
-    // 这里暂时设置为空，因为元素状态需要从调整记录中恢复
-    setElements({});
-    setPlacedItems([]);
-    setLightHours(8);
-    setIsCompleted(false);
-    
-    setShowResumeDialog(false);
-    setPendingSession(null);
-  };
-
-  // 开始新的学习
-  const handleStartNew = async () => {
-    setShowResumeDialog(false);
-    setPendingSession(null);
-    
-    const typeName = bottleType === 'water' ? '水生' : '陆生';
-    const initialMessage = `你好！我是生态瓶设计助手苗苗 🌱
-
-这是一个空的${typeName}生态瓶，让我们一起来设计它吧！
-
-你可以从右边选择生物和材料添加到生态瓶中。试试看！`;
-    setMessages([{ role: 'assistant', content: initialMessage }]);
-    setElements({});
-    setPlacedItems([]);
-    setLightHours(8);
-    setIsCompleted(false);
-    startSession();
-  };
 
   // 只在消息数量增加时滚动 ScrollArea 内部到底部
   useEffect(() => {
@@ -856,7 +687,7 @@ ${bottleType === 'water' ? `🌊 水生生态瓶的关键：
       {/* 主内容区 */}
       <div className="flex-1 flex gap-3 p-3 min-h-0">
         {/* 左列：生态瓶展示 */}
-        <div ref={snapshotRef} className="w-[45%] flex flex-col gap-3 min-h-0">
+        <div className="w-[45%] flex flex-col gap-3 min-h-0">
           {/* 生态瓶 */}
           <Card className="flex-1 flex flex-col min-h-0">
             <CardContent className="flex-1 p-3 min-h-0">
@@ -1009,28 +840,13 @@ ${bottleType === 'water' ? `🌊 水生生态瓶的关键：
           </Card>
 
           {/* 完成按钮 */}
-          <div className="flex gap-2">
-            <Button 
-              variant="outline"
-              onClick={handleCaptureSnapshot}
-              disabled={isCapturing || Object.values(elements).every(v => v === 0)}
-              className="flex-1 gap-1"
-            >
-              {isCapturing ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Camera className="w-4 h-4" />
-              )}
-              生成快照
-            </Button>
-            <Button 
-              onClick={handleComplete}
-              disabled={Object.values(elements).every(v => v === 0)}
-              className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold"
-            >
-              ✓ 完成设计
-            </Button>
-          </div>
+          <Button 
+            onClick={handleComplete}
+            disabled={Object.values(elements).every(v => v === 0)}
+            className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-3"
+          >
+            ✓ 完成设计
+          </Button>
         </div>
 
         {/* 右列：元素选择 + AI对话 */}
@@ -1158,40 +974,6 @@ ${bottleType === 'water' ? `🌊 水生生态瓶的关键：
           </Card>
         </div>
       </div>
-
-      {/* 恢复会话对话框 */}
-      {showResumeDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Card className="w-[90%] max-w-md">
-            <CardHeader>
-              <CardTitle className="text-lg">发现未完成的学习</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                你之前有一次未完成的{bottleType === 'water' ? '水生' : '陆生'}生态瓶设计学习。
-              </p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                是否继续上次的学习？
-              </p>
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  className="flex-1"
-                  onClick={handleStartNew}
-                >
-                  开始新学习
-                </Button>
-                <Button 
-                  className="flex-1 bg-gradient-to-r from-blue-500 to-cyan-600"
-                  onClick={handleResumeSession}
-                >
-                  继续学习
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
     </div>
   );
 }

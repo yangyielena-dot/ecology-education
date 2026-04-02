@@ -52,8 +52,6 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const student_id = searchParams.get('student_id');
     const module_type = searchParams.get('module_type');
-    const module_detail = searchParams.get('module_detail');
-    const status = searchParams.get('status');
     const limit = parseInt(searchParams.get('limit') || '50');
 
     const client = getSupabaseClient();
@@ -69,12 +67,6 @@ export async function GET(request: NextRequest) {
     }
     if (module_type) {
       query = query.eq('module_type', module_type);
-    }
-    if (module_detail) {
-      query = query.eq('module_detail', module_detail);
-    }
-    if (status) {
-      query = query.eq('status', status);
     }
 
     const { data, error } = await query;
