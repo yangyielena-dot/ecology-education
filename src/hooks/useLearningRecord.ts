@@ -133,6 +133,25 @@ export function useLearningRecord({ moduleType, moduleDetail }: UseLearningRecor
     }
   }, [sessionId]);
 
+  // 加载历史消息
+  const loadMessages = useCallback(async (sid: string): Promise<Array<{role: 'user' | 'assistant', content: string}>> => {
+    try {
+      const response = await fetch(`/api/learning/messages?session_id=${sid}`);
+      const result = await response.json();
+      
+      if (result.success && result.messages) {
+        return result.messages.map((msg: Message) => ({
+          role: msg.role,
+          content: msg.content,
+        }));
+      }
+      return [];
+    } catch (error) {
+      console.error('加载历史消息失败:', error);
+      return [];
+    }
+  }, []);
+
   // 恢复或创建会话（检查是否有进行中的会话）
   const resumeOrCreateSession = useCallback(async () => {
     const studentId = getStudentId();
@@ -180,6 +199,7 @@ export function useLearningRecord({ moduleType, moduleDetail }: UseLearningRecor
     resumeOrCreateSession,
     saveMessage,
     endSession,
+    loadMessages,
     getStudentId,
   };
 }

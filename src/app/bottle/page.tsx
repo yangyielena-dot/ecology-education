@@ -263,7 +263,7 @@ export default function BottlePage() {
   const bottleRef = useRef<HTMLDivElement>(null);
 
   // 学习记录
-  const { resumeOrCreateSession, saveMessage, endSession, sessionId } = useLearningRecord({
+  const { resumeOrCreateSession, saveMessage, endSession, loadMessages, sessionId } = useLearningRecord({
     moduleType: 'bottle',
     moduleDetail: bottleType || undefined,
   });
@@ -295,22 +295,36 @@ export default function BottlePage() {
 
   // 初始化消息和学习会话
   useEffect(() => {
-    if (bottleType) {
-      const typeName = bottleType === 'water' ? '水生' : '陆生';
-      const initialMessage = `你好！我是生态瓶设计助手苗苗 🌱
+    const initSession = async () => {
+      if (bottleType) {
+        // 先尝试恢复会话
+        const sid = await resumeOrCreateSession();
+        
+        // 如果恢复了会话，加载历史消息
+        if (sid) {
+          const history = await loadMessages(sid);
+          if (history && history.length > 0) {
+            setMessages(history);
+            return;
+          }
+        }
+        
+        // 没有历史消息，使用初始消息
+        const typeName = bottleType === 'water' ? '水生' : '陆生';
+        const initialMessage = `你好！我是生态瓶设计助手苗苗 🌱
 
 这是一个空的${typeName}生态瓶，让我们一起来设计它吧！
 
 你可以从右边选择生物和材料添加到生态瓶中。试试看！`;
-      setMessages([{ role: 'assistant', content: initialMessage }]);
-      setElements({});
-      setPlacedItems([]);
-      setLightHours(8);
-      setIsCompleted(false);
-      // 恢复或创建学习会话
-      resumeOrCreateSession();
-    }
-  }, [bottleType, resumeOrCreateSession]);
+        setMessages([{ role: 'assistant', content: initialMessage }]);
+        setElements({});
+        setPlacedItems([]);
+        setLightHours(8);
+        setIsCompleted(false);
+      }
+    };
+    initSession();
+  }, [bottleType, resumeOrCreateSession, loadMessages]);
 
   // 只在消息数量增加时滚动 ScrollArea 内部到底部
   useEffect(() => {

@@ -195,7 +195,7 @@ export default function CasePage() {
   const prevMessagesLengthRef = useRef(0);
 
   // 学习记录
-  const { resumeOrCreateSession, saveMessage, endSession, sessionId } = useLearningRecord({
+  const { resumeOrCreateSession, saveMessage, endSession, loadMessages, sessionId } = useLearningRecord({
     moduleType: 'detective',
     moduleDetail: caseId,
   });
@@ -229,13 +229,27 @@ export default function CasePage() {
 
   // 初始化消息和学习会话
   useEffect(() => {
-    if (caseData) {
-      setMessages([{ role: 'assistant', content: caseData.initialMessage }]);
-      setTreatmentParams(caseData.parameters);
-      // 恢复或创建学习会话
-      resumeOrCreateSession();
-    }
-  }, [caseId, caseData, resumeOrCreateSession]);
+    const initSession = async () => {
+      if (caseData) {
+        // 先尝试恢复会话
+        const sid = await resumeOrCreateSession();
+        
+        // 如果恢复了会话，加载历史消息
+        if (sid) {
+          const history = await loadMessages(sid);
+          if (history && history.length > 0) {
+            setMessages(history);
+            return;
+          }
+        }
+        
+        // 没有历史消息，使用初始消息
+        setMessages([{ role: 'assistant', content: caseData.initialMessage }]);
+        setTreatmentParams(caseData.parameters);
+      }
+    };
+    initSession();
+  }, [caseId, caseData, resumeOrCreateSession, loadMessages]);
 
   // 只在消息数量增加时滚动 ScrollArea 内部到底部
   useEffect(() => {

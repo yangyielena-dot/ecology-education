@@ -33,14 +33,24 @@ export default function PlanetPage() {
   const prevMessagesLengthRef = useRef(0);
 
   // 学习记录
-  const { resumeOrCreateSession, saveMessage, endSession, sessionId } = useLearningRecord({
+  const { resumeOrCreateSession, saveMessage, endSession, loadMessages, sessionId } = useLearningRecord({
     moduleType: 'planet',
   });
 
   // 创建或恢复学习会话
   useEffect(() => {
-    resumeOrCreateSession();
-  }, [resumeOrCreateSession]);
+    const initSession = async () => {
+      const sid = await resumeOrCreateSession();
+      // 如果恢复了会话，加载历史消息
+      if (sid) {
+        const history = await loadMessages(sid);
+        if (history && history.length > 0) {
+          setMessages(history);
+        }
+      }
+    };
+    initSession();
+  }, [resumeOrCreateSession, loadMessages]);
 
   // 只在消息数量增加时滚动 ScrollArea 内部到底部
   useEffect(() => {
