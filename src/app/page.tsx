@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Globe, FlaskConical, Leaf, TreePine, Search, User, Lock } from 'lucide-react';
+import { Globe, FlaskConical, Leaf, TreePine, Search, User, Lock, Send, CheckCircle, FileText, Loader2 } from 'lucide-react';
 
 // 模块名称映射
 const MODULE_NAMES: Record<string, string> = {
@@ -27,6 +27,17 @@ export default function Home() {
   const [studentName, setStudentName] = useState<string>('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
+  
+  // 提交报告相关状态
+  const [showSubmitDialog, setShowSubmitDialog] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [learningStats, setLearningStats] = useState<{
+    total_sessions: number;
+    total_messages: number;
+    total_images: number;
+    completed_sessions: number;
+  } | null>(null);
 
   // 页面加载时始终弹出输入框，让用户输入ID
   useEffect(() => {
@@ -61,6 +72,55 @@ export default function Home() {
       return;
     }
     router.push(path);
+  };
+
+  // 获取学习统计
+  const fetchLearningStats = async () => {
+    if (!studentId) return;
+    
+    try {
+      const response = await fetch(`/api/learning/export?student_id=${encodeURIComponent(studentId)}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        setLearningStats({
+          total_sessions: data.total_sessions || 0,
+          total_messages: data.total_messages || 0,
+          total_images: data.total_images || 0,
+          completed_sessions: data.sessions?.filter((s: any) => s.session.status === 'completed').length || 0,
+        });
+      }
+    } catch (error) {
+      console.error('获取学习统计失败:', error);
+    }
+  };
+
+  // 打开提交报告对话框
+  const handleOpenSubmitDialog = async () => {
+    await fetchLearningStats();
+    setShowSubmitDialog(true);
+  };
+
+  // 提交学习报告
+  const handleSubmitReport = async () => {
+    if (!studentId) return;
+    
+    setIsSubmitting(true);
+    try {
+      // 这里只是标记提交成功，实际数据已经在学习过程中保存了
+      // 可以添加一个提交时间戳到数据库，或者只是显示确认信息
+      await new Promise(resolve => setTimeout(resolve, 1000)); // 模拟提交过程
+      
+      setSubmitSuccess(true);
+      setTimeout(() => {
+        setShowSubmitDialog(false);
+        setSubmitSuccess(false);
+      }, 2000);
+    } catch (error) {
+      console.error('提交失败:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -249,6 +309,32 @@ export default function Home() {
           </Card>
         </div>
 
+        {/* 提交学习报告区域 */}
+        {studentId && (
+          <div className="max-w-2xl mx-auto mb-6">
+            <Card className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/30 dark:to-blue-900/30 border-2 border-dashed border-green-300 dark:border-green-700">
+              <CardContent className="p-6 text-center">
+                <div className="flex items-center justify-center gap-2 mb-3">
+                  <Send className="w-5 h-5 text-green-600" />
+                  <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
+                    完成学习了吗？
+                  </h3>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  点击下方按钮提交你的学习报告，老师将能看到你的学习成果
+                </p>
+                <Button 
+                  className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white font-semibold px-8 py-6 text-base"
+                  onClick={handleOpenSubmitDialog}
+                >
+                  <Send className="w-5 h-5 mr-2" />
+                  提交学习报告
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         {/* Footer */}
         <div className="text-center text-gray-500 dark:text-gray-400">
           <p className="text-sm">
@@ -300,6 +386,95 @@ export default function Home() {
               确认
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 提交学习报告对话框 */}
+      <Dialog open={showSubmitDialog} onOpenChange={setShowSubmitDialog}>
+        <DialogContent className="sm:max-w-md">
+          {submitSuccess ? (
+            <div className="py-8 text-center">
+              <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-2">
+                提交成功！
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                你的学习报告已成功提交，老师可以查看你的学习成果了。
+              </p>
+            </div>
+          ) : (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-green-600" />
+                  提交学习报告
+                </DialogTitle>
+                <DialogDescription>
+                  确认提交你的学习记录给老师查看
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="py-4">
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mb-4">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                    学生：{studentName || studentId}
+                  </p>
+                  
+                  {learningStats ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-white dark:bg-gray-700 p-3 rounded-lg text-center">
+                        <p className="text-2xl font-bold text-green-600">{learningStats.total_sessions}</p>
+                        <p className="text-xs text-gray-500">学习次数</p>
+                      </div>
+                      <div className="bg-white dark:bg-gray-700 p-3 rounded-lg text-center">
+                        <p className="text-2xl font-bold text-blue-600">{learningStats.completed_sessions}</p>
+                        <p className="text-xs text-gray-500">完成任务</p>
+                      </div>
+                      <div className="bg-white dark:bg-gray-700 p-3 rounded-lg text-center">
+                        <p className="text-2xl font-bold text-purple-600">{learningStats.total_messages}</p>
+                        <p className="text-xs text-gray-500">对话消息</p>
+                      </div>
+                      <div className="bg-white dark:bg-gray-700 p-3 rounded-lg text-center">
+                        <p className="text-2xl font-bold text-orange-600">{learningStats.total_images}</p>
+                        <p className="text-xs text-gray-500">生成图片</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex justify-center py-4">
+                      <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                    </div>
+                  )}
+                </div>
+                
+                <p className="text-xs text-gray-500 text-center">
+                  提交后，老师可以在管理页面查看你的完整学习记录
+                </p>
+              </div>
+              
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setShowSubmitDialog(false)}>
+                  取消
+                </Button>
+                <Button 
+                  onClick={handleSubmitReport} 
+                  disabled={isSubmitting || !learningStats}
+                  className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      提交中...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4 mr-2" />
+                      确认提交
+                    </>
+                  )}
+                </Button>
+              </div>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>
