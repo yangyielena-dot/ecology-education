@@ -39,22 +39,13 @@ export default function Home() {
     completed_sessions: number;
   } | null>(null);
 
-  // 页面加载时检查是否有已保存的学生ID
+  // 页面加载时清空旧的ID缓存，要求学生重新输入
   useEffect(() => {
-    const savedId = localStorage.getItem('student_id');
-    const savedName = localStorage.getItem('student_name');
-    
-    if (savedId) {
-      // 已有ID，直接使用，不弹窗
-      setStudentId(savedId);
-      if (savedName) {
-        setStudentName(savedName);
-      }
-      setIsDialogOpen(false);
-    } else {
-      // 没有ID，弹出输入框
-      setIsDialogOpen(true);
-    }
+    // 清除旧的缓存数据
+    localStorage.removeItem('student_id');
+    localStorage.removeItem('student_name');
+    // 弹出空白输入框
+    setIsDialogOpen(true);
   }, []);
 
   // 保存学生ID
@@ -362,6 +353,7 @@ export default function Home() {
                 placeholder="例如：学号、姓名拼音等"
                 value={studentId}
                 onChange={(e) => setStudentId(e.target.value)}
+                autoComplete="off"
               />
               <p className="text-xs text-gray-400">请记住你的ID，下次使用相同的ID可以看到历史记录</p>
             </div>
@@ -373,6 +365,7 @@ export default function Home() {
                 placeholder="你的姓名"
                 value={studentName}
                 onChange={(e) => setStudentName(e.target.value)}
+                autoComplete="off"
               />
             </div>
           </div>
