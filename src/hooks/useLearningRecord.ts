@@ -133,12 +133,18 @@ export function useLearningRecord({ moduleType, moduleDetail }: UseLearningRecor
     }
   }, [sessionId]);
 
+  // 恢复会话
+  const resumeSession = useCallback((existingSessionId: string) => {
+    setSessionId(existingSessionId);
+  }, []);
+
   return {
     sessionId,
     isLoading,
     startSession,
     saveMessage,
     endSession,
+    resumeSession,
     getStudentId,
   };
 }
