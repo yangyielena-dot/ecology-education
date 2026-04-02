@@ -39,13 +39,32 @@ export default function Home() {
     completed_sessions: number;
   } | null>(null);
 
-  // 页面加载时清空旧的ID缓存，要求学生重新输入
+  // 页面加载时检查会话状态
   useEffect(() => {
-    // 清除旧的缓存数据
-    localStorage.removeItem('student_id');
-    localStorage.removeItem('student_name');
-    // 弹出空白输入框
-    setIsDialogOpen(true);
+    // 检查是否是新会话（网页刚打开）
+    const isNewSession = !sessionStorage.getItem('session_active');
+    
+    if (isNewSession) {
+      // 新会话：清除旧的ID缓存，设置会话标记
+      localStorage.removeItem('student_id');
+      localStorage.removeItem('student_name');
+      sessionStorage.setItem('session_active', 'true');
+      setIsDialogOpen(true);
+    } else {
+      // 同一会话：检查是否有已保存的ID
+      const savedId = localStorage.getItem('student_id');
+      const savedName = localStorage.getItem('student_name');
+      
+      if (savedId) {
+        setStudentId(savedId);
+        if (savedName) {
+          setStudentName(savedName);
+        }
+        setIsDialogOpen(false);
+      } else {
+        setIsDialogOpen(true);
+      }
+    }
   }, []);
 
   // 保存学生ID
