@@ -309,29 +309,17 @@ export default function Home() {
           </Card>
         </div>
 
-        {/* 提交学习报告区域 */}
+        {/* 提交学习报告区域 - 紧凑版 */}
         {studentId && (
-          <div className="max-w-2xl mx-auto mb-6">
-            <Card className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/30 dark:to-blue-900/30 border-2 border-dashed border-green-300 dark:border-green-700">
-              <CardContent className="p-6 text-center">
-                <div className="flex items-center justify-center gap-2 mb-3">
-                  <Send className="w-5 h-5 text-green-600" />
-                  <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
-                    完成学习了吗？
-                  </h3>
-                </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                  点击下方按钮提交你的学习报告，老师将能看到你的学习成果
-                </p>
-                <Button 
-                  className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white font-semibold px-8 py-6 text-base"
-                  onClick={handleOpenSubmitDialog}
-                >
-                  <Send className="w-5 h-5 mr-2" />
-                  提交学习报告
-                </Button>
-              </CardContent>
-            </Card>
+          <div className="text-center mb-4">
+            <Button 
+              variant="outline"
+              className="gap-2 bg-white/80 dark:bg-gray-800/80 border-2 border-green-300 dark:border-green-700 hover:bg-green-50 dark:hover:bg-green-900/30"
+              onClick={handleOpenSubmitDialog}
+            >
+              <Send className="w-4 h-4 text-green-600" />
+              <span className="text-sm">完成学习？点击提交报告</span>
+            </Button>
           </div>
         )}
 
