@@ -32,17 +32,12 @@ export default function Home() {
   const [reportData, setReportData] = useState<any>(null);
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
 
-  // 页面加载时检查是否已有学生ID
+  // 页面加载时始终弹出输入框，让用户输入ID
   useEffect(() => {
-    const savedId = localStorage.getItem('student_id');
-    const savedName = localStorage.getItem('student_name');
-    if (savedId) {
-      setStudentId(savedId);
-      setStudentName(savedName || '');
-    } else {
-      // 如果没有学生ID，自动弹出输入框
-      setIsDialogOpen(true);
-    }
+    // 清除旧的缓存数据，确保每次都需要重新输入ID
+    localStorage.removeItem('student_id');
+    localStorage.removeItem('student_name');
+    setIsDialogOpen(true);
   }, []);
 
   // 保存学生ID
