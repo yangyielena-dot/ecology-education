@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import html2canvas from 'html2canvas';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -11,7 +12,7 @@ import { VoiceInput } from '@/components/ui/voice-input';
 import { Slider } from '@/components/ui/slider';
 import { 
   Loader2, Send, FlaskConical, Droplets, Wind,
-  ArrowLeft, Sparkles, Sun, Plus, Minus, CheckCircle
+  ArrowLeft, Sparkles, Sun, Plus, Minus, CheckCircle, Camera
 } from 'lucide-react';
 import { useLearningRecord } from '@/hooks/useLearningRecord';
 
@@ -98,16 +99,38 @@ function calculateWaterEnvironment(elements: Record<string, number>, lightHours:
   let waste = 20;
   waste += fishCount * 8;
   waste += snailCount * 2;
-  waste -= snailCount * 3;
+  waste -= snailCount * 3; // 螺吃藻类
   waste -= waterweedCount * 2;
   
-  const idealOxygen = 60;
-  const stability = Math.max(0, 100 - Math.abs(oxygen - idealOxygen) - Math.abs(waste - 30));
+  // 改进的稳定性计算
+  // 溶氧量：40-80为理想范围，太低或太高都不好
+  const oxygenScore = oxygen >= 40 && oxygen <= 80 
+    ? 100 
+    : oxygen < 40 
+      ? Math.max(0, 100 - (40 - oxygen) * 2)  // 太低扣分多
+      : Math.max(0, 100 - (oxygen - 80) * 0.5);  // 太高扣分少
   
+  // 废物浓度：越低越好，0-30为理想范围
+  const wasteScore = waste <= 30 
+    ? 100 
+    : Math.max(0, 100 - (waste - 30) * 1.5);
+  
+  // 生物平衡度：动物和植物的比例
+  const totalAnimals = fishCount + snailCount;
+  const totalPlants = waterweedCount + duckweedCount;
+  const balanceScore = totalAnimals === 0 
+    ? 80  // 没有动物也算可以
+    : totalPlants === 0 
+      ? 30  // 有动物没植物不好
+      : Math.min(100, 50 + Math.min(totalPlants, totalAnimals * 3) * 10);
+  
+  // 综合稳定性
+  const stability = Math.round(oxygenScore * 0.4 + wasteScore * 0.3 + balanceScore * 0.3);
+
   return {
     oxygen: Math.max(0, Math.min(100, Math.round(oxygen))),
     waste: Math.max(0, Math.min(100, Math.round(waste))),
-    stability: Math.max(0, Math.min(100, Math.round(stability))),
+    stability: Math.max(0, Math.min(100, stability)),
   };
 }
 
@@ -131,13 +154,36 @@ function calculateLandEnvironment(elements: Record<string, number>, lightHours: 
   organic += pillbugCount * 3;
   organic -= mossCount * 2;
   
+  // 改进的稳定性计算
+  // 湿度：50-70为理想范围
+  const humidityScore = humidity >= 50 && humidity <= 70 
+    ? 100 
+    : humidity < 50 
+      ? Math.max(0, 100 - (50 - humidity) * 1.5)
+      : Math.max(0, 100 - (humidity - 70) * 1);
+  
+  // 有机物：30-50为理想范围
+  const organicScore = organic >= 30 && organic <= 50 
+    ? 100 
+    : organic < 30 
+      ? Math.max(0, 100 - (30 - organic) * 1)
+      : Math.max(0, 100 - (organic - 50) * 1.5);
+  
+  // 生物平衡度
   const totalAnimals = earthwormCount + antCount + pillbugCount + beetleCount;
-  const stability = Math.max(0, 100 - Math.abs(humidity - 60) - Math.abs(organic - 40) - Math.max(0, totalAnimals - 10) * 3);
+  const balanceScore = mossCount === 0 
+    ? 50  // 没有苔藓
+    : totalAnimals === 0 
+      ? 70  // 没有动物
+      : Math.min(100, 60 + Math.min(totalAnimals, mossCount) * 5);
+  
+  // 综合稳定性
+  const stability = Math.round(humidityScore * 0.35 + organicScore * 0.35 + balanceScore * 0.3);
   
   return {
     oxygen: Math.max(0, Math.min(100, Math.round(humidity))),
     waste: Math.max(0, Math.min(100, Math.round(organic))),
-    stability: Math.max(0, Math.min(100, Math.round(stability))),
+    stability: Math.max(0, Math.min(100, stability)),
   };
 }
 
@@ -217,7 +263,7 @@ export default function BottlePage() {
   const bottleRef = useRef<HTMLDivElement>(null);
 
   // 学习记录
-  const { startSession, saveMessage, endSession, sessionId } = useLearningRecord({
+  const { resumeOrCreateSession, saveMessage, endSession, sessionId } = useLearningRecord({
     moduleType: 'bottle',
     moduleDetail: bottleType || undefined,
   });
@@ -226,6 +272,26 @@ export default function BottlePage() {
   const envData = bottleType === 'water' 
     ? calculateWaterEnvironment(elements, lightHours) 
     : calculateLandEnvironment(elements, lightHours);
+
+  // 生成快照
+  const handleSnapshot = async () => {
+    const bottleContainer = document.getElementById('bottle-snapshot-area');
+    if (!bottleContainer) return;
+
+    try {
+      const canvas = await html2canvas(bottleContainer, {
+        backgroundColor: '#f0fdf4',
+        scale: 2,
+      });
+      
+      const link = document.createElement('a');
+      link.download = `生态瓶快照_${new Date().toISOString().slice(0, 10)}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch (error) {
+      console.error('生成快照失败:', error);
+    }
+  };
 
   // 初始化消息和学习会话
   useEffect(() => {
@@ -241,10 +307,10 @@ export default function BottlePage() {
       setPlacedItems([]);
       setLightHours(8);
       setIsCompleted(false);
-      // 创建学习会话
-      startSession();
+      // 恢复或创建学习会话
+      resumeOrCreateSession();
     }
-  }, [bottleType, startSession]);
+  }, [bottleType, resumeOrCreateSession]);
 
   // 只在消息数量增加时滚动 ScrollArea 内部到底部
   useEffect(() => {
@@ -688,6 +754,8 @@ ${bottleType === 'water' ? `🌊 水生生态瓶的关键：
       <div className="flex-1 flex gap-3 p-3 min-h-0">
         {/* 左列：生态瓶展示 */}
         <div className="w-[45%] flex flex-col gap-3 min-h-0">
+          {/* 快照区域 */}
+          <div id="bottle-snapshot-area" className="flex flex-col gap-3 flex-1 min-h-0">
           {/* 生态瓶 */}
           <Card className="flex-1 flex flex-col min-h-0">
             <CardContent className="flex-1 p-3 min-h-0">
@@ -838,6 +906,17 @@ ${bottleType === 'water' ? `🌊 水生生态瓶的关键：
               </div>
             </CardContent>
           </Card>
+          </div>{/* 快照区域结束 */}
+
+          {/* 快照按钮 */}
+          <Button 
+            variant="outline"
+            className="w-full gap-2"
+            onClick={handleSnapshot}
+          >
+            <Camera className="w-4 h-4" />
+            生成快照
+          </Button>
 
           {/* 完成按钮 */}
           <Button 

@@ -133,10 +133,51 @@ export function useLearningRecord({ moduleType, moduleDetail }: UseLearningRecor
     }
   }, [sessionId]);
 
+  // 恢复或创建会话（检查是否有进行中的会话）
+  const resumeOrCreateSession = useCallback(async () => {
+    const studentId = getStudentId();
+    if (!studentId) {
+      return startSession();
+    }
+
+    setIsLoading(true);
+    try {
+      // 先查询是否有进行中的会话
+      const params = new URLSearchParams({
+        student_id: studentId,
+        module_type: moduleType,
+      });
+      if (moduleDetail) {
+        params.set('module_detail', moduleDetail);
+      }
+
+      const response = await fetch(`/api/learning/session?${params.toString()}`);
+      const result = await response.json();
+
+      if (result.success && result.sessions && result.sessions.length > 0) {
+        // 找到最近的进行中的会话
+        const activeSession = result.sessions.find((s: Session) => s.status === 'active');
+        if (activeSession) {
+          setSessionId(activeSession.id);
+          return activeSession.id;
+        }
+      }
+
+      // 没有进行中的会话，创建新的
+      return startSession();
+    } catch (error) {
+      console.error('恢复会话失败:', error);
+      return startSession();
+    } finally {
+      setIsLoading(false);
+    }
+  }, [moduleType, moduleDetail, startSession]);
+
   return {
     sessionId,
     isLoading,
     startSession,
+    resumeOrCreateSession,
     saveMessage,
     endSession,
     getStudentId,
