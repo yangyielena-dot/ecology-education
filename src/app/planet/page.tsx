@@ -93,6 +93,61 @@ export default function PlanetPage() {
 
     const userMessage = input.trim();
     setInput('');
+    
+    // 检查是否是重新开始
+    if (userMessage === '重新开始') {
+      setIsLoading(true);
+      
+      // 清空状态
+      setGeneratedImage(null);
+      
+      // 获取AI回复
+      try {
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: userMessage,
+            context: 'planet',
+            conversationHistory: messages
+          }),
+        });
+
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
+        let assistantMessage = '';
+
+        if (reader) {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value);
+            assistantMessage += chunk;
+          }
+
+          // 清空对话历史，只保留AI的重新开始回复
+          setMessages([{ role: 'assistant', content: assistantMessage }]);
+          
+          // 结束当前会话并创建新会话
+          if (sessionId) {
+            await endSession();
+            await resumeOrCreateSession();
+          }
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        setMessages([{ 
+          role: 'assistant', 
+          content: '抱歉，出现了一些问题。请稍后再试。' 
+        }]);
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
+    // 正常对话流程
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setIsLoading(true);
 
