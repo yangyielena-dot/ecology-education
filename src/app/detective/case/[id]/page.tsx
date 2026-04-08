@@ -191,6 +191,7 @@ export default function CasePage() {
   const [treatmentImage, setTreatmentImage] = useState<string | null>(null);
   const [treatmentResult, setTreatmentResult] = useState<string | null>(null);
   const [isCompleting, setIsCompleting] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true); // 添加初始化状态
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const prevMessagesLengthRef = useRef(0);
 
@@ -229,24 +230,43 @@ export default function CasePage() {
 
   // 初始化消息和学习会话 - 确保每个病例有独立的会话
   useEffect(() => {
+    let isMounted = true;
+    
     const initSession = async () => {
       if (caseData) {
-        // 先结束之前的会话（如果有）
-        if (sessionId) {
-          await endSession();
-        }
-        
-        // 创建新会话（新病例不应该加载旧病例的对话历史）
-        const sid = await startSession();
-        if (sid) {
-          // 新病例使用初始消息，不加载历史
-          setMessages([{ role: 'assistant', content: caseData.initialMessage }]);
-          setTreatmentParams(caseData.parameters);
+        setIsInitializing(true); // 开始初始化
+        try {
+          // 先结束之前的会话（如果有）
+          if (sessionId) {
+            await endSession();
+          }
+          
+          // 创建新会话（新病例不应该加载旧病例的对话历史）
+          const sid = await startSession();
+          if (isMounted) {
+            if (sid) {
+              // 新病例使用初始消息，不加载历史
+              setMessages([{ role: 'assistant', content: caseData.initialMessage }]);
+              setTreatmentParams(caseData.parameters);
+            }
+            setIsInitializing(false); // 初始化完成（无论成功失败都设置）
+          }
+        } catch (error) {
+          console.error('初始化会话失败:', error);
+          if (isMounted) {
+            setIsInitializing(false); // 确保失败时也设置为 false
+          }
         }
       }
     };
+    
     initSession();
-  }, [caseId, caseData, startSession, endSession, sessionId]);
+    
+    return () => {
+      isMounted = false;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [caseId]); // 只依赖 caseId，不依赖 sessionId 避免死循环
 
   // 只在消息数量增加时滚动 ScrollArea 内部到底部
   useEffect(() => {
@@ -274,7 +294,7 @@ export default function CasePage() {
   const IconComponent = caseData.icon;
 
   const sendMessage = async () => {
-    if (!input.trim() || isLoading) return;
+    if (!input.trim() || isLoading || isInitializing || !sessionId) return;
     const userMessage = input.trim();
     setInput('');
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
@@ -354,7 +374,7 @@ export default function CasePage() {
         <Button 
           size="sm"
           onClick={handleComplete}
-          disabled={isCompleting || !sessionId}
+          disabled={isCompleting || !sessionId || isInitializing}
           className="gap-1 bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700"
         >
           {isCompleting ? (
@@ -456,9 +476,9 @@ export default function CasePage() {
             </ScrollArea>
             <div className="p-2 border-t flex-shrink-0">
               <div className="flex gap-1">
-                <Input value={input} onChange={(e) => setInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && sendMessage()} placeholder="说说想法..." disabled={isLoading} className="flex-1 h-8 text-xs" />
-                <VoiceInput onTranscript={(text) => setInput(prev => prev + text)} disabled={isLoading} />
-                <Button onClick={sendMessage} disabled={isLoading || !input.trim()} size="icon" className="h-8 w-8 bg-purple-500"><Send className="w-3 h-3" /></Button>
+                <Input value={input} onChange={(e) => setInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && sendMessage()} placeholder="说说想法..." disabled={isLoading || isInitializing} className="flex-1 h-8 text-xs" />
+                <VoiceInput onTranscript={(text) => setInput(prev => prev + text)} disabled={isLoading || isInitializing} />
+                <Button onClick={sendMessage} disabled={isLoading || isInitializing || !input.trim()} size="icon" className="h-8 w-8 bg-purple-500"><Send className="w-3 h-3" /></Button>
               </div>
             </div>
           </CardContent>
