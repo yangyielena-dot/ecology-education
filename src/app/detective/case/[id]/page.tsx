@@ -195,7 +195,7 @@ export default function CasePage() {
   const prevMessagesLengthRef = useRef(0);
 
   // 学习记录
-  const { resumeOrCreateSession, saveMessage, endSession, loadMessages, sessionId } = useLearningRecord({
+  const { startSession, saveMessage, endSession, sessionId } = useLearningRecord({
     moduleType: 'detective',
     moduleDetail: caseId,
   });
@@ -227,29 +227,26 @@ export default function CasePage() {
     }
   };
 
-  // 初始化消息和学习会话
+  // 初始化消息和学习会话 - 确保每个病例有独立的会话
   useEffect(() => {
     const initSession = async () => {
       if (caseData) {
-        // 先尝试恢复会话
-        const sid = await resumeOrCreateSession();
-        
-        // 如果恢复了会话，加载历史消息
-        if (sid) {
-          const history = await loadMessages(sid);
-          if (history && history.length > 0) {
-            setMessages(history);
-            return;
-          }
+        // 先结束之前的会话（如果有）
+        if (sessionId) {
+          await endSession();
         }
         
-        // 没有历史消息，使用初始消息
-        setMessages([{ role: 'assistant', content: caseData.initialMessage }]);
-        setTreatmentParams(caseData.parameters);
+        // 创建新会话（新病例不应该加载旧病例的对话历史）
+        const sid = await startSession();
+        if (sid) {
+          // 新病例使用初始消息，不加载历史
+          setMessages([{ role: 'assistant', content: caseData.initialMessage }]);
+          setTreatmentParams(caseData.parameters);
+        }
       }
     };
     initSession();
-  }, [caseId, caseData, resumeOrCreateSession, loadMessages]);
+  }, [caseId, caseData, startSession, endSession, sessionId]);
 
   // 只在消息数量增加时滚动 ScrollArea 内部到底部
   useEffect(() => {
