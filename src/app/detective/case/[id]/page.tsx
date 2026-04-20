@@ -22,13 +22,13 @@ import { useLearningRecord } from '@/hooks/useLearningRecord';
 // 病例图片配置
 const CASE_IMAGES: Record<string, { sick: string }> = {
   'floating-head': {
-    sick: 'https://coze-coding-project.tos.coze.site/coze_storage_7622857839190507562/image/generate_image_dedb1fc6-ead7-4ecd-b5f6-bcd921ea0a8f.jpeg?sign=1806393482-eb517beb30-0-5a999f29ca87699f57f36b488d0aad4663ef92fb7ad4e63f5d3ee3f5ff182f36',
+    sick: 'https://coze-coding-project.tos.coze.site/coze_storage_7622857839190507562/image/generate_image_17f4a37f-9d23-47f5-973a-2f8c5d9967e1.jpeg?sign=1808195807-53dc76074a-0-8dca1ee6dbaf46de16add326a1a2c069733421e6cf1d692aabd8be24360b3b79',
   },
   'green-water': {
-    sick: 'https://coze-coding-project.tos.coze.site/coze_storage_7622857839190507562/image/generate_image_02b4bfdf-8f33-44ca-bcae-9c82380d75d1.jpeg?sign=1806393477-8d308ee7f4-0-2-c81bb1ddffbb9148128e728d8a82740bf8c82d11379cb8a19c0d86f8c8f864e',
+    sick: 'https://coze-coding-project.tos.coze.site/coze_storage_7622857839190507562/image/generate_image_7d57bf72-772e-43bc-982c-6fbcd73d020b.jpeg?sign=1808195802-213194d6cf-0-81440a916b52fe9f6d8734943327ecc46547b06f9846ff5c3fae61ceb3724cec',
   },
   'dead-silence': {
-    sick: 'https://coze-coding-project.tos.coze.site/coze_storage_7622857839190507562/image/generate_image_80d96f1c-a0d2-448d-9d8e-fc8c1ce89c4a.jpeg?sign=1806393475-f1fc48168a-0-e0a9c081156b2dfa531244d9a6f96556891a3813c128e63405750e9c50a2c2b2',
+    sick: 'https://coze-coding-project.tos.coze.site/coze_storage_7622857839190507562/image/generate_image_c63cdabc-fbb7-4e44-b79b-056cd52cc24d.jpeg?sign=1808195802-4aaf36bc42-0-e3fd365f7a0aa2d9f00a9f83c7047937bb0fa22b6ece2bd0a7006b346bf936f0',
   },
 };
 
