@@ -85,6 +85,24 @@ async function getLLMClient() {
   return { LLMClient, Config, HeaderUtils };
 }
 
+// 处理 chunk content，提取文本
+function extractText(content: unknown): string {
+  if (typeof content === 'string') {
+    return content;
+  }
+  if (Array.isArray(content)) {
+    return content
+      .map(item => {
+        if (typeof item === 'object' && item !== null && 'text' in item) {
+          return (item as { text: string }).text;
+        }
+        return '';
+      })
+      .join('');
+  }
+  return '';
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { messages, module } = await request.json();
@@ -118,8 +136,9 @@ export async function POST(request: NextRequest) {
           );
 
           for await (const chunk of response) {
-            if (chunk.content) {
-              controller.enqueue(new TextEncoder().encode(chunk.content));
+            const text = extractText(chunk.content);
+            if (text) {
+              controller.enqueue(new TextEncoder().encode(text));
             }
           }
         } catch (error) {
