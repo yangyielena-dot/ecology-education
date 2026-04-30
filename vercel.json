@@ -1,6 +1,7 @@
 {
+  "buildCommand": "pnpm next build",
+  "outputDirectory": ".next",
+  "installCommand": "pnpm install",
   "framework": "nextjs",
-  "cleanUrls": true,
-  "installCommand": "npm install --include=dev",
-  "buildCommand": "npm run build"
+  "eslintIgnore": true
 }
