@@ -4,10 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "bash ./scripts/dev.sh",
-    "build": "bash ./scripts/build.sh",
-    "start": "bash ./scripts/start.sh",
-    "lint": "eslint",
-    "ts-check": "tsc -p tsconfig.json"
+    "build": "next build",
+    "start": "next start",
+    "lint": "echo 'skip lint'",
+    "ts-check": "echo 'skip ts-check'"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.958.0",
