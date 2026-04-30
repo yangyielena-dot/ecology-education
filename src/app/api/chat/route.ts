@@ -110,18 +110,16 @@ export async function POST(request: NextRequest) {
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          const response = await client.chat.stream({
-            messages: formattedMessages.map(m => ({
-              role: m.role as 'user' | 'assistant' | 'system',
+          const response = client.stream(
+            formattedMessages.map(m => ({
+              role: m.role,
               content: m.content
-            })),
-            stream: true,
-          });
+            }))
+          );
 
           for await (const chunk of response) {
-            if (chunk.choices?.[0]?.delta?.content) {
-              const text = chunk.choices[0].delta.content;
-              controller.enqueue(new TextEncoder().encode(text));
+            if (chunk.content) {
+              controller.enqueue(new TextEncoder().encode(chunk.content));
             }
           }
         } catch (error) {
