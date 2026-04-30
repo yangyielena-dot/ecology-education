@@ -85,10 +85,7 @@
     "tailwindcss": "^4",
     "tsup": "^8.3.5",
     "tsx": "^4.19.2",
-    "typescript": "^5",
-    "@types/node": "^22",
-    "@types/react": "^19",
-    "@types/react-dom": "^19"
+    "typescript": "^5"
   },
   "packageManager": "pnpm@9.0.0",
   "engines": {
