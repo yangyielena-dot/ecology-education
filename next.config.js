@@ -1,7 +1,6 @@
-import type { NextConfig } from 'next';
-
-const nextConfig: NextConfig = {
-  // outputFileTracingRoot: path.resolve(__dirname, '../../'),  // Uncomment and add 'import path from "path"' if needed
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  // outputFileTracingRoot: path.resolve(__dirname, '../../'),  // Uncomment and add 'const path = require("path")' if needed
   /* config options here */
   allowedDevOrigins: ['*.dev.coze.site'],
   images: {
@@ -25,4 +24,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+module.exports = nextConfig;
