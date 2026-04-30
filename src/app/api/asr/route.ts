@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ASRClient, Config, HeaderUtils } from 'coze-coding-dev-sdk';
+
+// 动态导入 SDK 以避免构建时问题
+async function getASRClient() {
+  const { ASRClient, Config, HeaderUtils } = await import('coze-coding-dev-sdk');
+  return { ASRClient, Config, HeaderUtils };
+}
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { audioData, audioUrl } = body;
 
-    // 需要提供音频数据或URL
     if (!audioData && !audioUrl) {
       return NextResponse.json(
         { error: '请提供音频数据或音频URL' },
@@ -14,14 +18,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 提取请求头
+    const { ASRClient, Config, HeaderUtils } = await getASRClient();
     const customHeaders = HeaderUtils.extractForwardHeaders(request.headers);
-    
-    // 初始化 ASR 客户端
     const config = new Config();
     const asrClient = new ASRClient(config, customHeaders);
 
-    // 调用语音识别
     const result = await asrClient.recognize({
       uid: 'user-' + Date.now(),
       url: audioUrl,
