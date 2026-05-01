@@ -144,17 +144,41 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-50 to-blue-50 dark:from-green-950 dark:to-blue-950">
-      <div className="container mx-auto px-4 py-6">
+    <div className="min-h-screen bg-gradient-to-b from-green-50 via-emerald-50 to-blue-50 dark:from-green-950 dark:via-emerald-950 dark:to-blue-950 relative overflow-hidden">
+      {/* 装饰性背景元素 */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {/* 左上角叶子装饰 */}
+        <div className="absolute top-10 left-10 w-32 h-32 opacity-20">
+          <svg viewBox="0 0 100 100" className="w-full h-full text-green-600">
+            <path fill="currentColor" d="M50 5C25 15 10 40 15 65c5-25 20-45 35-60z" />
+          </svg>
+        </div>
+        {/* 右上角圆形装饰 */}
+        <div className="absolute top-20 right-20 w-24 h-24 rounded-full bg-gradient-to-br from-green-200 to-emerald-300 opacity-30 animate-pulse" />
+        {/* 左下角叶子 */}
+        <div className="absolute bottom-20 left-20 w-20 h-20 opacity-15 rotate-45">
+          <Leaf className="w-full h-full text-emerald-500" />
+        </div>
+        {/* 右下角装饰 */}
+        <div className="absolute bottom-10 right-10 w-28 h-28 rounded-full bg-gradient-to-br from-blue-200 to-cyan-300 opacity-20" />
+        {/* 中间浮动装饰 */}
+        <div className="absolute top-1/3 left-8 w-16 h-16 rounded-lg bg-gradient-to-br from-yellow-200 to-orange-200 opacity-20 rotate-12 animate-bounce" />
+        <div className="absolute top-1/2 right-12 w-12 h-12 rounded-full bg-gradient-to-br from-purple-200 to-pink-200 opacity-15" />
+        {/* 底部装饰线 */}
+        <div className="absolute bottom-0 left-0 right-0 h-2 bg-gradient-to-r from-green-400 via-emerald-500 to-blue-500 opacity-30" />
+      </div>
+      
+      <div className="container mx-auto px-4 py-6 relative z-10">
         {/* Hero Section - 紧凑版 */}
         <div className="text-center mb-6">
           <div className="flex justify-center mb-3">
             <div className="relative">
-              <Leaf className="w-16 h-16 text-green-500 animate-pulse" />
+              <div className="absolute inset-0 w-20 h-20 bg-green-400 rounded-full blur-xl opacity-40 animate-pulse" />
+              <Leaf className="w-16 h-16 text-green-500 animate-pulse relative z-10" />
               <TreePine className="w-10 h-10 text-emerald-600 absolute -right-3 -bottom-1 animate-bounce" />
             </div>
           </div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent mb-2">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-green-600 via-emerald-500 to-blue-600 bg-clip-text text-transparent mb-2 drop-shadow-sm">
             生态危机拯救计划
           </h1>
           <p className="text-base text-gray-600 dark:text-gray-300 max-w-xl mx-auto">

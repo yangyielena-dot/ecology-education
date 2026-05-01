@@ -240,18 +240,30 @@ export default function PlanetPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-50 to-emerald-100 dark:from-green-950 dark:to-emerald-900">
-      <div className="container mx-auto px-4 py-6">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 dark:from-green-950 dark:via-emerald-950 dark:to-teal-950 relative overflow-hidden">
+      {/* 装饰性背景元素 */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 left-10 w-40 h-40 rounded-full bg-gradient-to-br from-green-200 to-emerald-300 opacity-20 blur-3xl" />
+        <div className="absolute top-40 right-20 w-32 h-32 rounded-full bg-gradient-to-br from-emerald-200 to-green-300 opacity-15 blur-2xl" />
+        <div className="absolute bottom-20 left-1/4 w-48 h-48 rounded-full bg-gradient-to-br from-teal-200 to-cyan-300 opacity-10 blur-3xl" />
+        <div className="absolute top-1/2 right-10 w-20 h-20 rounded-lg bg-gradient-to-br from-green-300 to-emerald-400 opacity-10 rotate-45" />
+        <Globe className="absolute top-24 right-32 w-64 h-64 text-green-200 opacity-10 animate-spin" />
+      </div>
+      
+      <div className="container mx-auto px-4 py-6 relative z-10">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <Link href="/">
-            <Button variant="ghost" className="gap-2">
+            <Button variant="ghost" className="gap-2 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
               <ArrowLeft className="w-4 h-4" />
               返回首页
             </Button>
           </Link>
           <div className="flex items-center gap-2">
-            <Globe className="w-6 h-6 text-green-600" />
+            <div className="relative">
+              <div className="absolute inset-0 bg-green-400 rounded-full blur-lg opacity-40" />
+              <Globe className="w-6 h-6 text-green-600 relative z-10" />
+            </div>
             <h1 className="text-2xl font-bold text-green-700 dark:text-green-400">
               重建生态星球
             </h1>
