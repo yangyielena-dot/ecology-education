@@ -105,9 +105,25 @@ function extractText(content: unknown): string {
 
 export async function POST(request: NextRequest) {
   try {
-    const { messages, module } = await request.json();
-
-    if (!messages || !Array.isArray(messages)) {
+    const body = await request.json();
+    
+    // 支持两种格式：新格式 {messages, module} 和旧格式 {message, context, conversationHistory}
+    let messages: Message[];
+    let module: string;
+    
+    if (body.messages && Array.isArray(body.messages)) {
+      // 新格式
+      messages = body.messages;
+      module = body.module || 'planet';
+    } else if (body.message && body.context) {
+      // 旧格式兼容
+      const conversationHistory: Message[] = body.conversationHistory || [];
+      messages = [
+        ...conversationHistory,
+        { role: 'user' as const, content: body.message }
+      ];
+      module = body.context;
+    } else {
       return new Response(JSON.stringify({ error: '无效的消息格式' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
