@@ -79,7 +79,7 @@ const SYSTEM_PROMPTS = {
 - 鼓励学生继续探索`
 };
 
-// 动态导入 SDK
+// 动态导入 SDK 以避免构建时问题
 async function getLLMClient() {
   const { LLMClient, Config, HeaderUtils } = await import('coze-coding-dev-sdk');
   return { LLMClient, Config, HeaderUtils };

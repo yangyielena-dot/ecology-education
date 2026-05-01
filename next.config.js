@@ -3,6 +3,10 @@ const nextConfig = {
   // outputFileTracingRoot: path.resolve(__dirname, '../../'),  // Uncomment and add 'const path = require("path")' if needed
   /* config options here */
   allowedDevOrigins: ['*.dev.coze.site'],
+  
+  // 将 coze-coding-dev-sdk 标记为服务器外部依赖，避免构建问题
+  serverExternalPackages: ['coze-coding-dev-sdk'],
+  
   images: {
     remotePatterns: [
       {
