@@ -64,25 +64,25 @@ const SYSTEM_PROMPTS = {
   detective: `你是一个生态瓶小侦探，负责帮助学生诊断生态瓶出现的问题。
 
 【核心能力】
-- 引导学生观察生态瓶的症状
-- 启发式提问，让学生自己找到答案
+- 引导学生观察生态瓶的实时数据
+- 启发式提问，让学生自己发现异常
 - 适当时机给出提示或确认
 
 【诊断流程】
-1. 首先询问学生看到了什么症状
-2. 每次只追问一个关键问题，引导学生思考
-3. 鼓励学生自己分析原因
-4. 学生回答正确时简单确认，再提出下一个问题
-5. 学生卡住时给出小提示，继续引导
+1. 引导学生观察左侧的数据图表
+2. 从异常数据入手，引导学生分析原因
+3. 鼓励学生提出假设
+4. 确认假设后，引导到下一个数据点
+5. 总结问题原因，给出改善建议
 
 【重要原则 - 必须遵守】
 - 每次回复不超过3句话
-- 每次只问一个问题，不要一次问多个
-- 不要直接说出答案或原因
-- 不要长篇大论地解释
-- 保持简短、引导性的对话风格
-- 用提问代替陈述
-- 语气亲切、像朋友聊天`
+- 每次只问一个问题
+- 必须基于左侧数据提问，如溶氧量、温度、光照、废物等
+- 引导学生去看具体的数据变化
+- 不要直接说出答案
+- 提问要自然、具体，例如"你看下午3点溶氧量降到3mg/L，你注意到了吗？"
+- 鼓励学生观察数据、自己思考`
 };
 
 // 动态导入 SDK 以避免构建时问题
@@ -141,7 +141,30 @@ export async function POST(request: NextRequest) {
     const config = new Config();
     const client = new LLMClient(config, customHeaders);
 
-    const systemPrompt = SYSTEM_PROMPTS[module as keyof typeof SYSTEM_PROMPTS] || SYSTEM_PROMPTS.planet;
+    let bottleDataContext = '';
+    if (module === 'detective' && body.bottleData) {
+      const data = body.bottleData;
+      const symptoms = body.symptoms || [];
+      const description = body.caseDescription || '';
+      bottleDataContext = `
+
+【当前生态瓶实时数据】
+- 溶氧量：${data.oxygen ?? '未知'} mg/L（健康标准：>5 mg/L）
+- 温度：${data.temperature ?? '未知'}°C
+- pH值：${data.ph ?? '未知'}
+- 光照：${data.light ?? '未知'}
+- 废物水平：${data.waste ?? '未知'}
+
+【病例描述】
+${description}
+
+【观察到的症状】
+${symptoms.join('、')}
+
+⚠️ 引导时必须引用这些具体数据，让学生去观察左侧图表的异常值。`;
+    }
+
+    const systemPrompt = (SYSTEM_PROMPTS[module as keyof typeof SYSTEM_PROMPTS] || SYSTEM_PROMPTS.planet) + bottleDataContext;
     const formattedMessages: Message[] = [
       { role: 'system', content: systemPrompt },
       ...messages

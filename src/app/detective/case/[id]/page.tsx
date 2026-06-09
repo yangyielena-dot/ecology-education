@@ -307,7 +307,7 @@ export default function CasePage() {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userMessage, context: 'detective', caseId, caseName: caseData.name, conversationHistory: messages }),
+        body: JSON.stringify({ message: userMessage, context: 'detective', caseId, caseName: caseData.name, conversationHistory: messages, bottleData: caseData.currentData, caseDescription: caseData.description, symptoms: caseData.treatmentHints || [] }),
       });
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
